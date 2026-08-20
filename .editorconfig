@@ -1,0 +1,49 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = crlf
+insert_final_newline = true
+indent_style = space
+trim_trailing_whitespace = true
+
+[*.{cs,csproj,props,targets}]
+indent_size = 4
+
+[*.{ts,tsx,js,json,yml,yaml,xml,md}]
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false
+
+[*.cs]
+csharp_style_namespace_declarations = file_scoped:warning
+csharp_prefer_braces = true:warning
+csharp_style_prefer_primary_constructors = true:warning
+csharp_style_prefer_pattern_matching = true:warning
+csharp_style_prefer_switch_expression = true:warning
+csharp_style_implicit_object_creation_when_type_is_apparent = true:warning
+dotnet_style_collection_initializer = true:warning
+dotnet_style_readonly_field = true:warning
+dotnet_style_require_accessibility_modifiers = for_non_interface_members:warning
+
+dotnet_naming_rule.private_fields_underscore.severity = warning
+dotnet_naming_rule.private_fields_underscore.symbols = private_fields
+dotnet_naming_rule.private_fields_underscore.style = underscore_prefix
+
+dotnet_naming_symbols.private_fields.applicable_kinds = field
+dotnet_naming_symbols.private_fields.applicable_accessibilities = private
+
+dotnet_naming_style.underscore_prefix.required_prefix = _
+dotnet_naming_style.underscore_prefix.capitalization = camel_case
+
+# Nullable reference types already force callers to pass non-null, so the extra
+# runtime guard this rule asks for would be dead code.
+dotnet_diagnostic.CA1062.severity = none
+
+# The library is not localised and the exception messages are developer facing.
+dotnet_diagnostic.CA1303.severity = none
+
+[tests/**/*.cs]
+# Test names use underscores to separate the subject from the expectation.
+dotnet_diagnostic.CA1707.severity = none

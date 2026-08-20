@@ -1,0 +1,14 @@
+bin/
+obj/
+*.user
+*.suo
+.vs/
+
+node_modules/
+pcf/**/out/
+pcf/**/generated/
+
+solutions/**/*.zip
+
+appsettings.Local.json
+.env
