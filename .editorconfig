@@ -48,6 +48,10 @@ dotnet_diagnostic.CA1303.severity = none
 # constructor this rule asks for would allow a violation with nothing to report.
 dotnet_diagnostic.CA1032.severity = none
 
+# Status values mirror Dataverse choice columns, which are numbered from one.
+# A zero member would map to a state the platform cannot represent.
+dotnet_diagnostic.CA1008.severity = none
+
 [tests/**/*.cs]
 # Test names use underscores to separate the subject from the expectation.
 dotnet_diagnostic.CA1707.severity = none
