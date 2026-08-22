@@ -44,6 +44,10 @@ dotnet_diagnostic.CA1062.severity = none
 # The library is not localised and the exception messages are developer facing.
 dotnet_diagnostic.CA1303.severity = none
 
+# Domain exceptions always name the rule that was broken, so the parameterless
+# constructor this rule asks for would allow a violation with nothing to report.
+dotnet_diagnostic.CA1032.severity = none
+
 [tests/**/*.cs]
 # Test names use underscores to separate the subject from the expectation.
 dotnet_diagnostic.CA1707.severity = none
