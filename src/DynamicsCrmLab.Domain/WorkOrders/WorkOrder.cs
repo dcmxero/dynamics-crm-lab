@@ -67,7 +67,14 @@ public sealed class WorkOrder
     /// <summary>
     /// Gets the amount to invoice, derived from the lines.
     /// </summary>
-    public Money TotalPrice => _lines.Aggregate(Money.Zero(), (sum, line) => sum + line.LineTotal);
+    /// <remarks>
+    /// The currency comes from the lines rather than from a seed value, because
+    /// <see cref="Money.Zero(string)"/> is always EUR and would reject a job
+    /// priced in anything else.
+    /// </remarks>
+    public Money TotalPrice => _lines.Count is 0
+        ? Money.Zero()
+        : _lines.Select(line => line.LineTotal).Aggregate(Money.Add);
 
     /// <summary>
     /// Raises a new work order against a piece of customer equipment.

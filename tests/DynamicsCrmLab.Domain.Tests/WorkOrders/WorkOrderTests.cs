@@ -82,6 +82,15 @@ public sealed class WorkOrderTests
     }
 
     [Fact]
+    public void TotalPrice_SupportsCurrenciesOtherThanEuro()
+    {
+        var order = NewWorkOrder();
+        order.AddLine("Technician labour", 2, Money.Of(45m, "USD"));
+
+        order.TotalPrice.Should().Be(Money.Of(90m, "USD"));
+    }
+
+    [Fact]
     public void Close_RequiresAResolution()
     {
         var order = InProgressWorkOrder();
