@@ -97,20 +97,29 @@ public sealed class WorkOrder
     /// <param name="description">The work done or the part used.</param>
     /// <param name="quantity">The number of hours or units.</param>
     /// <param name="unitPrice">The price of a single hour or unit.</param>
-    public void AddLine(string description, int quantity, Money unitPrice) =>
+    /// <exception cref="DomainException">Thrown when the job has already been closed.</exception>
+    public void AddLine(string description, int quantity, Money unitPrice)
+    {
+        EnsureNotClosed();
+
         _lines.Add(new WorkOrderLine(Guid.NewGuid(), description, quantity, unitPrice));
+    }
 
     /// <summary>
     /// Hands the job to a technician and moves it to <see cref="WorkOrderStatus.Assigned"/>.
     /// </summary>
     /// <param name="technicianId">The technician taking the job.</param>
-    /// <exception cref="DomainException">Thrown when no technician is given.</exception>
+    /// <exception cref="DomainException">
+    /// Thrown when no technician is given or the job has already been closed.
+    /// </exception>
     public void AssignTo(Guid technicianId)
     {
         if (technicianId == Guid.Empty)
         {
             throw new DomainException("A technician is required.");
         }
+
+        EnsureNotClosed();
 
         TechnicianId = technicianId;
         Status = WorkOrderStatus.Assigned;
@@ -133,11 +142,36 @@ public sealed class WorkOrder
     /// <summary>
     /// Finishes the job and records what was done.
     /// </summary>
+    /// <remarks>
+    /// A resolution is mandatory: a closed job with no account of the work is
+    /// worthless both to the customer and to whoever services the unit next.
+    /// </remarks>
     /// <param name="resolution">The account of the work carried out.</param>
-    public void Close(string? resolution)
+    /// <exception cref="DomainException">
+    /// Thrown when the resolution is missing or the job is not in progress.
+    /// </exception>
+    public void Close(string resolution)
     {
+        if (string.IsNullOrWhiteSpace(resolution))
+        {
+            throw new DomainException("A work order cannot be closed without a resolution.");
+        }
+
+        if (Status is not WorkOrderStatus.InProgress)
+        {
+            throw new DomainException($"Only an in-progress work order can be closed, current status is {Status}.");
+        }
+
         Status = WorkOrderStatus.Closed;
         Resolution = resolution;
+    }
+
+    private void EnsureNotClosed()
+    {
+        if (Status is WorkOrderStatus.Closed)
+        {
+            throw new DomainException("A closed work order can no longer be modified.");
+        }
     }
 
     private static string GenerateNumber() =>

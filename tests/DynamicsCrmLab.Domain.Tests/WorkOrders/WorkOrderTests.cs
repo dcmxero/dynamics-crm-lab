@@ -81,5 +81,71 @@ public sealed class WorkOrderTests
         NewWorkOrder().TotalPrice.Should().Be(Money.Zero());
     }
 
+    [Fact]
+    public void Close_RequiresAResolution()
+    {
+        var order = InProgressWorkOrder();
+
+        var act = () => order.Close("   ");
+
+        act.Should().Throw<DomainException>();
+    }
+
+    [Fact]
+    public void Close_IsRejectedBeforeTheWorkHasStarted()
+    {
+        var order = NewWorkOrder();
+
+        var act = () => order.Close("Replaced the filter.");
+
+        act.Should().Throw<DomainException>();
+    }
+
+    [Fact]
+    public void Close_ClosesAnInProgressOrder()
+    {
+        var order = InProgressWorkOrder();
+
+        order.Close("Replaced the filter.");
+
+        order.Status.Should().Be(WorkOrderStatus.Closed);
+        order.Resolution.Should().Be("Replaced the filter.");
+    }
+
+    [Fact]
+    public void AddLine_IsRejectedOnAClosedOrder()
+    {
+        var order = ClosedWorkOrder();
+
+        var act = () => order.AddLine("Labour", 1, Money.Of(50m));
+
+        act.Should().Throw<DomainException>();
+    }
+
+    [Fact]
+    public void AssignTo_IsRejectedOnAClosedOrder()
+    {
+        var order = ClosedWorkOrder();
+
+        var act = () => order.AssignTo(Guid.NewGuid());
+
+        act.Should().Throw<DomainException>();
+    }
+
     private static WorkOrder NewWorkOrder() => WorkOrder.Create(CustomerId, EquipmentId);
+
+    private static WorkOrder InProgressWorkOrder()
+    {
+        var order = NewWorkOrder();
+        order.AssignTo(Guid.NewGuid());
+        order.StartWork();
+        return order;
+    }
+
+    private static WorkOrder ClosedWorkOrder()
+    {
+        var order = InProgressWorkOrder();
+        order.Close("Done.");
+        return order;
+    }
 }
