@@ -10,6 +10,8 @@ work orders and technicians.
 ```
 src/
   DynamicsCrmLab.Domain     business rules, no dependencies
+tests/
+  DynamicsCrmLab.Domain.Tests
 ```
 
 The domain layer references nothing at all. Rules live inside the entities, so
@@ -20,14 +22,18 @@ of it needs Dataverse to run.
 
 - .NET SDK 10
 
-## Building
+## Building and testing
 
 ```bash
 dotnet build
+dotnet test
 ```
+
+The tests need no environment, no configuration and no connection.
 
 ## Conventions
 
 - shared build settings live in `Directory.Build.props`
+- package versions are managed centrally in `Directory.Packages.props`
 - .NET analysers run at `latest-all` and warnings fail the build
 - public members carry XML documentation
