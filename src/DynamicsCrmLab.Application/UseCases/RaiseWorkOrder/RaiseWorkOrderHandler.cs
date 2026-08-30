@@ -30,7 +30,7 @@ public sealed class RaiseWorkOrderHandler(
     /// <param name="cancellationToken">Cancels the operation.</param>
     /// <returns>
     /// The raised work order, or a failed result when the customer or the
-    /// equipment cannot be found.
+    /// equipment cannot be found, or when the job breaks a business rule.
     /// </returns>
     public async Task<Result<RaiseWorkOrderResult>> HandleAsync(
         RaiseWorkOrderCommand command,
@@ -50,11 +50,23 @@ public sealed class RaiseWorkOrderHandler(
             return Result.Failure<RaiseWorkOrderResult>($"Equipment {command.EquipmentId} does not exist.");
         }
 
-        var workOrder = WorkOrder.Create(customer.Id, unit.Id);
-
-        foreach (var line in command.Lines)
+        WorkOrder workOrder;
+        try
         {
-            workOrder.AddLine(line.Description, line.Quantity, Money.Of(line.UnitPrice, line.Currency));
+            workOrder = WorkOrder.Create(customer.Id, unit.Id);
+
+            foreach (var line in command.Lines)
+            {
+                workOrder.AddLine(line.Description, line.Quantity, Money.Of(line.UnitPrice, line.Currency));
+            }
+        }
+        catch (DomainException exception)
+        {
+            // A broken rule is an ordinary answer to the request, not a failure
+            // of the program, so the caller gets it as a result.
+            ApplicationLog.WorkOrderRejected(logger, command.CustomerId, exception.Message);
+
+            return Result.Failure<RaiseWorkOrderResult>(exception.Message);
         }
 
         var id = await workOrders.AddAsync(workOrder, cancellationToken).ConfigureAwait(false);

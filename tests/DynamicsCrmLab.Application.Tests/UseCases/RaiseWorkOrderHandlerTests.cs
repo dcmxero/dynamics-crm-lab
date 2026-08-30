@@ -51,6 +51,22 @@ public sealed class RaiseWorkOrderHandlerTests
     }
 
     [Fact]
+    public async Task HandleAsync_FailsWhenALineBreaksADomainRule()
+    {
+        var customer = _customers.Add();
+        var unit = _equipment.Add(customer.Id);
+
+        var result = await _handler.HandleAsync(new RaiseWorkOrderCommand(
+            customer.Id,
+            unit.Id,
+            [new WorkOrderLineInput("Technician labour", 0, 45m)]));
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error.Should().Contain("quantity");
+        _workOrders.Stored.Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task HandleAsync_FailsWhenTheEquipmentIsUnknown()
     {
         var customer = _customers.Add();
