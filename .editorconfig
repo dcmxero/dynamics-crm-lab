@@ -55,3 +55,7 @@ dotnet_diagnostic.CA1008.severity = none
 [tests/**/*.cs]
 # Test names use underscores to separate the subject from the expectation.
 dotnet_diagnostic.CA1707.severity = none
+
+# The test runner has no synchronization context to capture, so ConfigureAwait
+# would add noise without preventing anything.
+dotnet_diagnostic.CA2007.severity = none

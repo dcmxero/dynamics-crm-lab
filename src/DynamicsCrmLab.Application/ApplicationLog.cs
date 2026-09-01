@@ -22,4 +22,10 @@ internal static partial class ApplicationLog
         Level = LogLevel.Warning,
         Message = "Work order for customer {CustomerId} was rejected: {Reason}")]
     public static partial void WorkOrderRejected(ILogger logger, Guid customerId, string reason);
+
+    [LoggerMessage(
+        EventId = 1002,
+        Level = LogLevel.Information,
+        Message = "Work order {Number} assigned to {TechnicianName}.")]
+    public static partial void WorkOrderAssigned(ILogger logger, string number, string technicianName);
 }
