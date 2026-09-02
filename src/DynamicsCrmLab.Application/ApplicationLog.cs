@@ -1,3 +1,4 @@
+using DynamicsCrmLab.Domain.Common;
 using Microsoft.Extensions.Logging;
 
 namespace DynamicsCrmLab.Application;
@@ -28,4 +29,10 @@ internal static partial class ApplicationLog
         Level = LogLevel.Information,
         Message = "Work order {Number} assigned to {TechnicianName}.")]
     public static partial void WorkOrderAssigned(ILogger logger, string number, string technicianName);
+
+    [LoggerMessage(
+        EventId = 1003,
+        Level = LogLevel.Information,
+        Message = "Work order {Number} closed, {TotalPrice} to invoice.")]
+    public static partial void WorkOrderClosed(ILogger logger, string number, Money totalPrice);
 }
