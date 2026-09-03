@@ -27,6 +27,14 @@ is why the use cases can be tested against in-memory stores.
 A broken business rule comes back as a failed `Result<T>` rather than an
 exception - it is an ordinary answer to the request, not a program failure.
 
+## Use cases
+
+| Use case | What it does |
+|---|---|
+| `RaiseWorkOrder` | opens a job against a customer and their equipment |
+| `AssignWorkOrder` | puts a technician on it, picking one when none is named |
+| `CloseWorkOrder` | finishes it and records what was done |
+
 ## Requirements
 
 - .NET SDK 10
