@@ -13,6 +13,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Mapping and schema are implementation detail rather than public API,
+         but they are pure enough to be worth testing directly. -->
+    <InternalsVisibleTo Include="DynamicsCrmLab.Infrastructure.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\DynamicsCrmLab.Application\DynamicsCrmLab.Application.csproj" />
   </ItemGroup>
 
