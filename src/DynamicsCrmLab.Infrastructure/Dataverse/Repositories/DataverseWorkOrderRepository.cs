@@ -45,7 +45,11 @@ public sealed class DataverseWorkOrderRepository(IDataverseClient client) : IWor
     public async Task<WorkOrder?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var record = await client
-            .RetrieveAsync(WorkOrderSchema.EntityName, id, new ColumnSet(true), cancellationToken)
+            .RetrieveAsync(
+                WorkOrderSchema.EntityName,
+                id,
+                new ColumnSet([.. WorkOrderSchema.ReadColumns]),
+                cancellationToken)
             .ConfigureAwait(false);
 
         if (record is null)
@@ -74,7 +78,7 @@ public sealed class DataverseWorkOrderRepository(IDataverseClient client) : IWor
     {
         var query = new QueryExpression(WorkOrderSchema.EntityName)
         {
-            ColumnSet = new ColumnSet(true),
+            ColumnSet = new ColumnSet([.. WorkOrderSchema.ReadColumns]),
             Criteria = new FilterExpression
             {
                 Conditions = { new ConditionExpression(WorkOrderSchema.Status, ConditionOperator.Equal, (int)status) }
@@ -101,6 +105,10 @@ public sealed class DataverseWorkOrderRepository(IDataverseClient client) : IWor
             }
 
             query.PageInfo.PageNumber++;
+
+            // Without the cookie Dataverse restarts the scan, which silently
+            // returns duplicates and skips rows on large result sets.
+            query.PageInfo.PagingCookie = page.PagingCookie;
         }
 
         return [.. found.Take(maxCount)];

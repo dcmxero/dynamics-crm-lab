@@ -9,7 +9,7 @@ namespace DynamicsCrmLab.Infrastructure.Tests.Dataverse;
 /// </summary>
 internal sealed class FakeDataverseClient : IDataverseClient
 {
-    private readonly Queue<EntityCollection> _pages = new();
+    private readonly Dictionary<string, Queue<EntityCollection>> _pages = [];
 
     public List<Entity> Created { get; } = [];
 
@@ -21,7 +21,16 @@ internal sealed class FakeDataverseClient : IDataverseClient
 
     public Entity? RetrieveResult { get; set; }
 
-    public void EnqueuePage(EntityCollection page) => _pages.Enqueue(page);
+    public void EnqueuePage(string entityName, EntityCollection page)
+    {
+        if (!_pages.TryGetValue(entityName, out var queue))
+        {
+            queue = new Queue<EntityCollection>();
+            _pages[entityName] = queue;
+        }
+
+        queue.Enqueue(page);
+    }
 
     public Task<Guid> CreateAsync(Entity record, CancellationToken cancellationToken = default)
     {
@@ -43,7 +52,11 @@ internal sealed class FakeDataverseClient : IDataverseClient
         QueryBase query,
         CancellationToken cancellationToken = default)
     {
-        if (query is QueryExpression expression)
+        if (query is not QueryExpression expression)
+        {
+            return Task.FromResult(new EntityCollection());
+        }
+
         {
             // The repository mutates one query object between pages, so the page
             // number and cookie have to be captured as they were at call time.
@@ -59,7 +72,11 @@ internal sealed class FakeDataverseClient : IDataverseClient
             });
         }
 
-        return Task.FromResult(_pages.Count > 0 ? _pages.Dequeue() : new EntityCollection());
+        var queued = _pages.TryGetValue(expression.EntityName, out var queue) && queue.Count > 0
+            ? queue.Dequeue()
+            : new EntityCollection();
+
+        return Task.FromResult(queued);
     }
 
     public Task UpdateAsync(Entity record, CancellationToken cancellationToken = default)

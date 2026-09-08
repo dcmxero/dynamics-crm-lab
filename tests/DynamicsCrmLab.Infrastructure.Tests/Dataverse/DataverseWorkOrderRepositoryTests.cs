@@ -61,12 +61,48 @@ public sealed class DataverseWorkOrderRepositoryTests
     [Fact]
     public async Task ListByStatusAsync_FiltersByTheRequestedStage()
     {
-        _client.EnqueuePage(PageOf(rows: 1, moreRecords: false));
+        _client.EnqueuePage(WorkOrderSchema.EntityName, PageOf(rows: 1, moreRecords: false));
 
         var found = await _repository.ListByStatusAsync(WorkOrderStatus.New, maxCount: 10);
 
         found.Should().ContainSingle();
         _client.Queries[0].EntityName.Should().Be(WorkOrderSchema.EntityName);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_AsksForTheColumnsItNeedsRatherThanAllOfThem()
+    {
+        await _repository.GetByIdAsync(Guid.NewGuid());
+
+        _client.RetrievedColumns!.AllColumns.Should().BeFalse();
+        _client.RetrievedColumns.Columns.Should().BeEquivalentTo(WorkOrderSchema.ReadColumns);
+    }
+
+    [Fact]
+    public async Task ListByStatusAsync_AsksForTheColumnsItNeedsRatherThanAllOfThem()
+    {
+        _client.EnqueuePage(WorkOrderSchema.EntityName, PageOf(rows: 0, moreRecords: false));
+
+        await _repository.ListByStatusAsync(WorkOrderStatus.New, maxCount: 10);
+
+        _client.Queries[0].ColumnSet.AllColumns.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task ListByStatusAsync_CarriesThePagingCookieOntoTheNextPage()
+    {
+        _client.EnqueuePage(WorkOrderSchema.EntityName, PageOf(rows: 1, moreRecords: true));
+        _client.EnqueuePage(WorkOrderSchema.EntityName, PageOf(rows: 1, moreRecords: false));
+
+        await _repository.ListByStatusAsync(WorkOrderStatus.New, maxCount: 10);
+
+        var pageQueries = _client.Queries
+            .Where(q => q.EntityName == WorkOrderSchema.EntityName)
+            .ToList();
+
+        pageQueries.Should().HaveCountGreaterThan(1);
+        pageQueries[1].PageInfo.PageNumber.Should().Be(2);
+        pageQueries[1].PageInfo.PagingCookie.Should().Be("<cookie page=\"1\" />");
     }
 
     private static EntityCollection PageOf(int rows, bool moreRecords)
