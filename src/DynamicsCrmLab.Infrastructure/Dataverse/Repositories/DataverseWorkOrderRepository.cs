@@ -87,17 +87,13 @@ public sealed class DataverseWorkOrderRepository(IDataverseClient client) : IWor
             PageInfo = new PagingInfo { Count = Math.Min(maxCount, MaxPageSize), PageNumber = 1 }
         };
 
-        var found = new List<WorkOrder>();
+        var records = new List<Entity>();
 
-        while (found.Count < maxCount)
+        while (records.Count < maxCount)
         {
             var page = await client.RetrieveMultipleAsync(query, cancellationToken).ConfigureAwait(false);
 
-            foreach (var record in page.Entities)
-            {
-                var lines = await ReadLinesAsync(record.Id, cancellationToken).ConfigureAwait(false);
-                found.Add(WorkOrderMapper.ToDomain(record, lines));
-            }
+            records.AddRange(page.Entities);
 
             if (!page.MoreRecords)
             {
@@ -111,11 +107,39 @@ public sealed class DataverseWorkOrderRepository(IDataverseClient client) : IWor
             query.PageInfo.PagingCookie = page.PagingCookie;
         }
 
-        return [.. found.Take(maxCount)];
+        var wanted = records.Take(maxCount).ToList();
+
+        // One query for every line of every job on the page, rather than one
+        // query per job. The latter costs a round trip per row and runs into
+        // the service protection limits on any realistic result set.
+        var linesByWorkOrder = await ReadLinesAsync(
+            wanted.Select(record => record.Id).ToList(),
+            cancellationToken).ConfigureAwait(false);
+
+        return
+        [
+            .. wanted.Select(record => WorkOrderMapper.ToDomain(
+                record,
+                linesByWorkOrder.TryGetValue(record.Id, out var lines) ? lines : []))
+        ];
     }
 
     private async Task<IReadOnlyList<Entity>> ReadLinesAsync(Guid workOrderId, CancellationToken cancellationToken)
     {
+        var lines = await ReadLinesAsync([workOrderId], cancellationToken).ConfigureAwait(false);
+
+        return lines.TryGetValue(workOrderId, out var found) ? found : [];
+    }
+
+    private async Task<Dictionary<Guid, List<Entity>>> ReadLinesAsync(
+        List<Guid> workOrderIds,
+        CancellationToken cancellationToken)
+    {
+        if (workOrderIds.Count is 0)
+        {
+            return [];
+        }
+
         var query = new QueryExpression(WorkOrderLineSchema.EntityName)
         {
             ColumnSet = new ColumnSet([.. WorkOrderLineSchema.ReadColumns]),
@@ -123,13 +147,32 @@ public sealed class DataverseWorkOrderRepository(IDataverseClient client) : IWor
             {
                 Conditions =
                 {
-                    new ConditionExpression(WorkOrderLineSchema.WorkOrder, ConditionOperator.Equal, workOrderId)
+                    new ConditionExpression(
+                        WorkOrderLineSchema.WorkOrder,
+                        ConditionOperator.In,
+                        [.. workOrderIds.Cast<object>()])
                 }
             }
         };
 
         var page = await client.RetrieveMultipleAsync(query, cancellationToken).ConfigureAwait(false);
 
-        return page.Entities;
+        var byWorkOrder = new Dictionary<Guid, List<Entity>>();
+
+        foreach (var record in page.Entities)
+        {
+            var owner = record.GetAttributeValue<EntityReference>(WorkOrderLineSchema.WorkOrder)?.Id
+                        ?? workOrderIds[0];
+
+            if (!byWorkOrder.TryGetValue(owner, out var lines))
+            {
+                lines = [];
+                byWorkOrder[owner] = lines;
+            }
+
+            lines.Add(record);
+        }
+
+        return byWorkOrder;
     }
 }

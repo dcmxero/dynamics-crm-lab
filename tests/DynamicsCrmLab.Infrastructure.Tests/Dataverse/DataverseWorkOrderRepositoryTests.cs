@@ -105,6 +105,18 @@ public sealed class DataverseWorkOrderRepositoryTests
         pageQueries[1].PageInfo.PagingCookie.Should().Be("<cookie page=\"1\" />");
     }
 
+    [Fact]
+    public async Task ListByStatusAsync_ReadsTheLinesOfEveryJobInASingleQuery()
+    {
+        _client.EnqueuePage(WorkOrderSchema.EntityName, PageOf(rows: 3, moreRecords: false));
+
+        await _repository.ListByStatusAsync(WorkOrderStatus.New, maxCount: 10);
+
+        _client.Queries
+            .Count(q => q.EntityName == WorkOrderLineSchema.EntityName)
+            .Should().Be(1);
+    }
+
     private static EntityCollection PageOf(int rows, bool moreRecords)
     {
         var page = new EntityCollection { MoreRecords = moreRecords, PagingCookie = "<cookie page=\"1\" />" };
