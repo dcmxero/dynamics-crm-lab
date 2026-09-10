@@ -11,9 +11,11 @@ work orders and technicians.
 src/
   DynamicsCrmLab.Domain        business rules, no dependencies
   DynamicsCrmLab.Application   use cases and the ports they talk to
+  DynamicsCrmLab.Infrastructure  Dataverse connection, mapping, repositories
 tests/
   DynamicsCrmLab.Domain.Tests
   DynamicsCrmLab.Application.Tests
+  DynamicsCrmLab.Infrastructure.Tests
 ```
 
 The domain layer references nothing at all. Rules live inside the entities, so
@@ -34,6 +36,17 @@ exception - it is an ordinary answer to the request, not a program failure.
 | `RaiseWorkOrder` | opens a job against a customer and their equipment |
 | `AssignWorkOrder` | puts a technician on it, picking one when none is named |
 | `CloseWorkOrder` | finishes it and records what was done |
+
+## Dataverse
+
+Tables carry the `dcl_` publisher prefix: `dcl_workorder`, `dcl_workorderline`,
+`dcl_equipment` and `dcl_technician`. Customers use the stock `contact` table.
+
+The repositories are the only place that knows any of that. They ask for the
+columns they need rather than all of them, carry the paging cookie between
+pages, and read the lines of a whole page in one query.
+
+A free environment to point them at: [Power Apps Developer Plan](https://aka.ms/PowerAppsDevPlan).
 
 ## Requirements
 
