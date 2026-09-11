@@ -141,6 +141,27 @@ public sealed class WorkOrderTests
         act.Should().Throw<DomainException>();
     }
 
+    [Fact]
+    public void Restore_BringsBackTheStoredStateWithoutReapplyingTheRules()
+    {
+        var technicianId = Guid.NewGuid();
+
+        var restored = WorkOrder.Restore(
+            Guid.NewGuid(),
+            "WO-20260901-ABCDEF",
+            CustomerId,
+            EquipmentId,
+            technicianId,
+            WorkOrderStatus.Closed,
+            "Replaced the filter.",
+            [new WorkOrderLine(Guid.NewGuid(), "Technician labour", 2, Money.Of(45m))]);
+
+        restored.Status.Should().Be(WorkOrderStatus.Closed);
+        restored.TechnicianId.Should().Be(technicianId);
+        restored.Resolution.Should().Be("Replaced the filter.");
+        restored.TotalPrice.Should().Be(Money.Of(90m));
+    }
+
     private static WorkOrder NewWorkOrder() => WorkOrder.Create(CustomerId, EquipmentId);
 
     private static WorkOrder InProgressWorkOrder()

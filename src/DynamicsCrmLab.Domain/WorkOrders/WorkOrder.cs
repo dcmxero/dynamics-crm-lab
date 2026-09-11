@@ -99,6 +99,45 @@ public sealed class WorkOrder
     }
 
     /// <summary>
+    /// Rebuilds a work order from state that was previously stored.
+    /// </summary>
+    /// <remarks>
+    /// Meant for repositories only. It skips the rules deliberately, because the
+    /// state being restored already satisfied them when it was first written.
+    /// </remarks>
+    /// <param name="id">The identifier of the work order.</param>
+    /// <param name="number">The reference quoted to the customer.</param>
+    /// <param name="customerId">The customer the job is billed to.</param>
+    /// <param name="equipmentId">The equipment the job concerns.</param>
+    /// <param name="technicianId">The technician responsible, if any.</param>
+    /// <param name="status">The stage the job had reached.</param>
+    /// <param name="resolution">The account of the work, once it was closed.</param>
+    /// <param name="lines">The charges recorded against the job.</param>
+    /// <returns>The restored work order.</returns>
+    public static WorkOrder Restore(
+        Guid id,
+        string number,
+        Guid customerId,
+        Guid equipmentId,
+        Guid? technicianId,
+        WorkOrderStatus status,
+        string? resolution,
+        IEnumerable<WorkOrderLine> lines)
+    {
+        ArgumentNullException.ThrowIfNull(lines);
+
+        var workOrder = new WorkOrder(id, number, customerId, equipmentId, status)
+        {
+            TechnicianId = technicianId,
+            Resolution = resolution
+        };
+
+        workOrder._lines.AddRange(lines);
+
+        return workOrder;
+    }
+
+    /// <summary>
     /// Records a charge against the job.
     /// </summary>
     /// <param name="description">The work done or the part used.</param>
