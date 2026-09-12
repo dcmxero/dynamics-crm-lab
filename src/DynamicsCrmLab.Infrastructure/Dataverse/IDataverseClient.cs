@@ -46,6 +46,16 @@ public interface IDataverseClient
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Runs a named Dataverse operation, such as WhoAmI or a custom API.
+    /// </summary>
+    /// <param name="request">The operation to run.</param>
+    /// <param name="cancellationToken">Cancels the operation.</param>
+    /// <returns>The response the platform returned.</returns>
+    Task<OrganizationResponse> ExecuteAsync(
+        OrganizationRequest request,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Writes changed columns back to a row.
     /// </summary>
     /// <param name="record">The row carrying the columns to write.</param>

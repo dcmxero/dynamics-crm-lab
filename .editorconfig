@@ -52,6 +52,10 @@ dotnet_diagnostic.CA1032.severity = none
 # A zero member would map to a state the platform cannot represent.
 dotnet_diagnostic.CA1008.severity = none
 
+# Types registered in the container are constructed by reflection, which this
+# rule cannot see, so it reports every one of them as unused.
+dotnet_diagnostic.CA1812.severity = none
+
 [tests/**/*.cs]
 # Test names use underscores to separate the subject from the expectation.
 dotnet_diagnostic.CA1707.severity = none
