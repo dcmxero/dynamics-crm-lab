@@ -11,4 +11,6 @@ pcf/**/generated/
 solutions/**/*.zip
 
 appsettings.Local.json
+appsettings.*.User.json
 .env
+.token-cache/
