@@ -79,6 +79,11 @@ internal sealed class FakeDataverseClient : IDataverseClient
         return Task.FromResult(queued);
     }
 
+    public Task<OrganizationResponse> ExecuteAsync(
+        OrganizationRequest request,
+        CancellationToken cancellationToken = default) =>
+        Task.FromResult(new OrganizationResponse());
+
     public Task UpdateAsync(Entity record, CancellationToken cancellationToken = default)
     {
         Updated.Add(record);

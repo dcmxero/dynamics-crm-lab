@@ -12,6 +12,7 @@ src/
   DynamicsCrmLab.Domain        business rules, no dependencies
   DynamicsCrmLab.Application   use cases and the ports they talk to
   DynamicsCrmLab.Infrastructure  Dataverse connection, mapping, repositories
+  DynamicsCrmLab.Cli           console front end
 tests/
   DynamicsCrmLab.Domain.Tests
   DynamicsCrmLab.Application.Tests
@@ -60,6 +61,33 @@ dotnet test
 ```
 
 The tests need no environment, no configuration and no connection.
+
+## Running against an environment
+
+Nothing about the environment is committed. Point the tool at yours:
+
+```bash
+cd src/DynamicsCrmLab.Cli
+dotnet user-secrets set "Dataverse:Url" "https://your-org.crm4.dynamics.com"
+
+dotnet run -- whoami
+dotnet run -- raise <customerId> <equipmentId> "Technician labour" 2 45
+dotnet run -- assign <workOrderId>
+dotnet run -- close <workOrderId> "Replaced the compressor seal."
+```
+
+The first run opens a browser to sign in and caches the token, so later runs do
+not ask again. For a service or a pipeline, switch to an Entra ID application
+registration instead:
+
+```bash
+dotnet user-secrets set "Dataverse:AuthMode" "ClientSecret"
+dotnet user-secrets set "Dataverse:ClientId" "..."
+dotnet user-secrets set "Dataverse:ClientSecret" "..."
+```
+
+That registration also needs an application user with a security role in the
+target environment, otherwise it can reach the API but sees no data.
 
 ## Conventions
 
