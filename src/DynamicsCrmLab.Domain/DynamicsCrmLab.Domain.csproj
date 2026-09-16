@@ -1,7 +1,22 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <!--
+      Two targets on purpose. net10.0 serves the console and the tests;
+      netstandard2.0 lets the plug-in, which runs on .NET Framework 4.6.2 inside
+      the Dataverse sandbox, use the very same rules instead of a second copy.
+    -->
+    <TargetFrameworks>net10.0;netstandard2.0</TargetFrameworks>
+    <!-- Dataverse only loads strongly named assemblies, including dependencies. -->
+    <SignAssembly>true</SignAssembly>
+    <AssemblyOriginatorKeyFile>$(MSBuildThisFileDirectory)../../build/DynamicsCrmLab.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="PolySharp">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
 
 </Project>

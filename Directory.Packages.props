@@ -25,6 +25,15 @@
     <!-- Pinned to the 7.x line, which is Apache-2.0. Version 8 moved to a
          licence that is not free for commercial use. -->
     <PackageVersion Include="FluentAssertions" Version="7.2.2" />
+    <!-- Generates the types .NET Standard 2.0 lacks (records, Index, Range) so
+         the domain can be shared with the plug-in. Compile time only. -->
+    <PackageVersion Include="PolySharp" Version="1.15.0" />
+    <!-- Lets the plug-in target .NET Framework 4.6.2 without Visual Studio. -->
+    <PackageVersion Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" />
+    <!-- IPlugin, IOrganizationService and friends; already present in the sandbox. -->
+    <PackageVersion Include="Microsoft.CrmSdk.CoreAssemblies" Version="9.0.2.56" />
+    <!-- In-memory Dataverse for plug-in tests. The 1.x line is free; 2.x needs a licence key. -->
+    <PackageVersion Include="FakeXrmEasy.9" Version="1.58.1" />
   </ItemGroup>
 
 </Project>
