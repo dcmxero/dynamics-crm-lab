@@ -124,7 +124,15 @@ public sealed class WorkOrder
         string? resolution,
         IEnumerable<WorkOrderLine> lines)
     {
+#if NET6_0_OR_GREATER
         ArgumentNullException.ThrowIfNull(lines);
+#else
+        // The helper above arrived in .NET 6; the plug-in target is older.
+        if (lines is null)
+        {
+            throw new ArgumentNullException(nameof(lines));
+        }
+#endif
 
         var workOrder = new WorkOrder(id, number, customerId, equipmentId, status)
         {
