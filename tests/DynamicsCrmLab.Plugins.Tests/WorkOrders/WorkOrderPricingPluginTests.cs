@@ -20,11 +20,28 @@ public sealed class WorkOrderPricingPluginTests
     {
         var workOrderId = Guid.NewGuid();
         var context = ContextWithLines(workOrderId, (2, 45m), (1, 30m));
-
         var target = new Entity(WorkOrder, workOrderId);
-        RunPlugin(context, target, message: "Update");
 
-        TotalWrittenFor(context, workOrderId).Should().Be(120m);
+        RunPlugin(context, target);
+
+        TotalOn(target).Should().Be(120m);
+    }
+
+    [Fact]
+    public void Execute_WritesTheTotalOntoTheTargetRatherThanUpdatingTheRecordAgain()
+    {
+        var workOrderId = Guid.NewGuid();
+        var context = ContextWithLines(workOrderId, (1, 50m));
+        var target = new Entity(WorkOrder, workOrderId);
+
+        RunPlugin(context, target);
+
+        target.Contains(TotalPrice).Should().BeTrue();
+
+        // The stored row is untouched: in PreOperation the platform saves the
+        // target itself, so a separate update would be a second write and a
+        // second trip through the pipeline.
+        StoredTotalFor(context, workOrderId).Should().BeNull();
     }
 
     [Fact]
@@ -32,10 +49,23 @@ public sealed class WorkOrderPricingPluginTests
     {
         var workOrderId = Guid.NewGuid();
         var context = ContextWithLines(workOrderId);
+        var target = new Entity(WorkOrder, workOrderId);
 
-        RunPlugin(context, new Entity(WorkOrder, workOrderId), message: "Update");
+        RunPlugin(context, target);
 
-        TotalWrittenFor(context, workOrderId).Should().Be(0m);
+        TotalOn(target).Should().Be(0m);
+    }
+
+    [Fact]
+    public void Execute_SkipsWhenAnotherPluginTriggeredTheChange()
+    {
+        var workOrderId = Guid.NewGuid();
+        var context = ContextWithLines(workOrderId, (1, 50m));
+        var target = new Entity(WorkOrder, workOrderId);
+
+        RunPlugin(context, target, depth: 2);
+
+        target.Contains(TotalPrice).Should().BeFalse();
     }
 
     [Fact]
@@ -44,7 +74,7 @@ public sealed class WorkOrderPricingPluginTests
         var context = new XrmFakedContext();
         var target = new Entity("account", Guid.NewGuid());
 
-        RunPlugin(context, target, message: "Update");
+        RunPlugin(context, target);
 
         target.Contains(TotalPrice).Should().BeFalse();
     }
@@ -71,17 +101,22 @@ public sealed class WorkOrderPricingPluginTests
         return context;
     }
 
-    private static void RunPlugin(XrmFakedContext context, Entity target, string message)
+    private static void RunPlugin(XrmFakedContext context, Entity target, int depth = 1)
     {
         var pluginContext = context.GetDefaultPluginContext();
-        pluginContext.MessageName = message;
+        pluginContext.MessageName = "Update";
+        pluginContext.Stage = 20;
+        pluginContext.Depth = depth;
         pluginContext.InputParameters = new ParameterCollection { { "Target", target } };
 
         context.ExecutePluginWith<WorkOrderPricingPlugin>(pluginContext);
     }
 
-    private static decimal TotalWrittenFor(XrmFakedContext context, Guid workOrderId) =>
+    private static decimal TotalOn(Entity target) =>
+        target.GetAttributeValue<Money>(TotalPrice)?.Value ?? 0m;
+
+    private static decimal? StoredTotalFor(XrmFakedContext context, Guid workOrderId) =>
         context.CreateQuery(WorkOrder)
             .Single(row => row.Id == workOrderId)
-            .GetAttributeValue<Money>(TotalPrice)?.Value ?? 0m;
+            .GetAttributeValue<Money>(TotalPrice)?.Value;
 }
