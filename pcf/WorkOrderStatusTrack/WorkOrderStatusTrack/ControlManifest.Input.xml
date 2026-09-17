@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<manifest>
+  <control namespace="DynamicsCrmLab"
+           constructor="WorkOrderStatusTrack"
+           version="0.0.1"
+           display-name-key="WorkOrderStatusTrack_Display"
+           description-key="WorkOrderStatusTrack_Desc"
+           control-type="virtual">
+
+    <!-- Nothing is called outside the platform, so the control is not premium. -->
+    <external-service-usage enabled="false" />
+
+    <!-- The bound choice column holding the lifecycle stage. -->
+    <property name="status"
+              display-name-key="Status_Display"
+              description-key="Status_Desc"
+              of-type="OptionSet"
+              usage="bound"
+              required="true" />
+
+    <resources>
+      <code path="index.ts" order="1" />
+      <!-- React and Fluent come from the host, so they are not bundled. -->
+      <platform-library name="React" version="16.14.0" />
+      <platform-library name="Fluent" version="9.68.0" />
+    </resources>
+
+  </control>
+</manifest>
