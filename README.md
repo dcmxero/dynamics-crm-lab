@@ -14,6 +14,9 @@ src/
   DynamicsCrmLab.Infrastructure  Dataverse connection, mapping, repositories
   DynamicsCrmLab.Cli           console front end
   DynamicsCrmLab.Plugins       plug-ins that run inside Dataverse
+  DynamicsCrmLab.Schema        Dataverse logical names shared by both sides
+pcf/
+  WorkOrderStatusTrack         status track control for model-driven forms
 tests/
   DynamicsCrmLab.Domain.Tests
   DynamicsCrmLab.Application.Tests
@@ -69,9 +72,27 @@ saving the form needs to wait for a follow-up task to exist.
 
 Tests run against an in-memory Dataverse, so they need no environment either.
 
+## Custom UI
+
+`pcf/WorkOrderStatusTrack` is a Power Apps component framework control that
+shows the lifecycle of a job on the form. The stage logic is a plain module with
+no React in it and is unit tested; the component only draws what it is given.
+
+```bash
+cd pcf/WorkOrderStatusTrack
+npm install
+npm test
+npm run build
+npm start        # harness in the browser
+```
+
+Reaching into the form DOM from JavaScript would be unsupported and would break
+on any platform update, which is what a control like this avoids.
+
 ## Requirements
 
 - .NET SDK 10
+- Node.js 20 or newer, for the PCF control
 
 ## Building and testing
 
