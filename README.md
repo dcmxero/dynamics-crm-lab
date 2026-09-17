@@ -17,6 +17,7 @@ src/
   DynamicsCrmLab.Schema        Dataverse logical names shared by both sides
 pcf/
   WorkOrderStatusTrack         status track control for model-driven forms
+solutions/                     the Dataverse solution, unpacked
 tests/
   DynamicsCrmLab.Domain.Tests
   DynamicsCrmLab.Application.Tests
@@ -88,6 +89,32 @@ npm start        # harness in the browser
 
 Reaching into the form DOM from JavaScript would be unsupported and would break
 on any platform update, which is what a control like this avoids.
+
+## Getting the solution in and out of Dataverse
+
+A solution zip is opaque to git, so the unpacked form is what lives here:
+
+```bash
+pac auth create --environment https://your-org.crm4.dynamics.com
+
+pac solution export --path ./out/DynamicsCrmLab.zip --name DynamicsCrmLab --managed false
+pac solution unpack --zipfile ./out/DynamicsCrmLab.zip --folder ./solutions/DynamicsCrmLab --packagetype Unmanaged
+```
+
+Development happens against an **unmanaged** solution. Everything downstream
+gets a **managed** build, which cannot be edited in place and can be removed
+cleanly. Nothing is changed by hand in a downstream environment.
+
+Values that differ per environment - addresses, keys, switches - belong in
+environment variables rather than in the solution, and connections used by flows
+in connection references.
+
+Two workflows cover this:
+
+| Workflow | Trigger | What it does |
+|---|---|---|
+| `ci.yml` | push and pull request | builds and tests the .NET solution and the PCF control |
+| `solution-release.yml` | manual | exports from development, commits the unpacked form, imports the managed build into test |
 
 ## Requirements
 

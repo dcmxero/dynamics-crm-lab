@@ -1,0 +1,109 @@
+﻿# Moves a solution from the development environment to the test one.
+#
+# The shape of it is the point: develop against an unmanaged solution, keep the
+# unpacked form under source control, and import a managed build downstream.
+# Nothing is ever edited by hand in a downstream environment.
+#
+# Secrets this needs:
+#   DEV_ENVIRONMENT_URL, TEST_ENVIRONMENT_URL
+#   PP_CLIENT_ID, PP_CLIENT_SECRET, PP_TENANT_ID
+#
+# The service principal also needs an application user with a security role in
+# each environment, otherwise it can reach the API but sees nothing.
+
+name: Solution release
+
+on:
+  workflow_dispatch:
+    inputs:
+      solutionName:
+        description: Name of the solution in Dataverse
+        required: true
+        default: DynamicsCrmLab
+
+env:
+  SOLUTION_NAME: ${{ github.event.inputs.solutionName }}
+
+jobs:
+  export:
+    name: Export from development
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: microsoft/powerplatform-actions/actions-install@v1
+
+      # Unmanaged is what source control tracks: it is the editable form and the
+      # one that produces a readable diff once unpacked.
+      - name: Export unmanaged
+        uses: microsoft/powerplatform-actions/export-solution@v1
+        with:
+          environment-url: ${{ secrets.DEV_ENVIRONMENT_URL }}
+          app-id: ${{ secrets.PP_CLIENT_ID }}
+          client-secret: ${{ secrets.PP_CLIENT_SECRET }}
+          tenant-id: ${{ secrets.PP_TENANT_ID }}
+          solution-name: ${{ env.SOLUTION_NAME }}
+          solution-output-file: out/${{ env.SOLUTION_NAME }}.zip
+          managed: false
+
+      - name: Export managed
+        uses: microsoft/powerplatform-actions/export-solution@v1
+        with:
+          environment-url: ${{ secrets.DEV_ENVIRONMENT_URL }}
+          app-id: ${{ secrets.PP_CLIENT_ID }}
+          client-secret: ${{ secrets.PP_CLIENT_SECRET }}
+          tenant-id: ${{ secrets.PP_TENANT_ID }}
+          solution-name: ${{ env.SOLUTION_NAME }}
+          solution-output-file: out/${{ env.SOLUTION_NAME }}_managed.zip
+          managed: true
+
+      # A zip is opaque to git. Unpacking turns it into files that can be
+      # reviewed and merged like any other change.
+      - name: Unpack into source
+        uses: microsoft/powerplatform-actions/unpack-solution@v1
+        with:
+          solution-file: out/${{ env.SOLUTION_NAME }}.zip
+          solution-folder: solutions/${{ env.SOLUTION_NAME }}
+          solution-type: Unmanaged
+          overwrite-files: true
+
+      - name: Commit the unpacked solution
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add solutions/
+          git diff --staged --quiet || git commit -m "chore: update ${{ env.SOLUTION_NAME }} from development"
+          git push
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: managed-solution
+          path: out/${{ env.SOLUTION_NAME }}_managed.zip
+
+  import:
+    name: Import into test
+    needs: export
+    runs-on: windows-latest
+    environment: test
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: managed-solution
+          path: out
+
+      - uses: microsoft/powerplatform-actions/actions-install@v1
+
+      # Managed downstream: the components cannot be edited in place and the
+      # whole thing can be removed cleanly.
+      - name: Import managed
+        uses: microsoft/powerplatform-actions/import-solution@v1
+        with:
+          environment-url: ${{ secrets.TEST_ENVIRONMENT_URL }}
+          app-id: ${{ secrets.PP_CLIENT_ID }}
+          client-secret: ${{ secrets.PP_CLIENT_SECRET }}
+          tenant-id: ${{ secrets.PP_TENANT_ID }}
+          solution-file: out/${{ env.SOLUTION_NAME }}_managed.zip
+          force-overwrite: true
+          publish-changes: true
