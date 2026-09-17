@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using DynamicsCrmLab.Domain.WorkOrders;
 using DynamicsCrmLab.Plugins.Infrastructure;
+using DynamicsCrmLab.Schema;
 using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Query;
 using DomainMoney = DynamicsCrmLab.Domain.Common.Money;
@@ -33,7 +34,7 @@ public sealed class WorkOrderPricingPlugin() : PluginBase(nameof(WorkOrderPricin
     {
         var target = context.Target;
 
-        if (target is null || !string.Equals(target.LogicalName, WorkOrderColumns.EntityName, StringComparison.Ordinal))
+        if (target is null || !string.Equals(target.LogicalName, WorkOrderSchema.EntityName, StringComparison.Ordinal))
         {
             return;
         }
@@ -50,7 +51,7 @@ public sealed class WorkOrderPricingPlugin() : PluginBase(nameof(WorkOrderPricin
 
         context.Tracing.Trace("{0}: {1} line(s), total {2}", PluginName, lines.Count, total);
 
-        target[WorkOrderColumns.TotalPrice] = new XrmMoney(total.Amount);
+        target[WorkOrderSchema.TotalPrice] = new XrmMoney(total.Amount);
     }
 
     private static DomainMoney TotalOf(IReadOnlyCollection<WorkOrderLine> lines)
@@ -70,18 +71,18 @@ public sealed class WorkOrderPricingPlugin() : PluginBase(nameof(WorkOrderPricin
 
     private static List<WorkOrderLine> ReadLines(PluginContext context, Guid workOrderId)
     {
-        var query = new QueryExpression(WorkOrderLineColumns.EntityName)
+        var query = new QueryExpression(WorkOrderLineSchema.EntityName)
         {
             ColumnSet = new ColumnSet(
-                WorkOrderLineColumns.Description,
-                WorkOrderLineColumns.Quantity,
-                WorkOrderLineColumns.UnitPrice),
+                WorkOrderLineSchema.Description,
+                WorkOrderLineSchema.Quantity,
+                WorkOrderLineSchema.UnitPrice),
             Criteria = new FilterExpression
             {
                 Conditions =
                 {
                     new ConditionExpression(
-                        WorkOrderLineColumns.WorkOrder,
+                        WorkOrderLineSchema.WorkOrder,
                         ConditionOperator.Equal,
                         workOrderId)
                 }
@@ -93,9 +94,9 @@ public sealed class WorkOrderPricingPlugin() : PluginBase(nameof(WorkOrderPricin
             .Entities
             .Select(record => new WorkOrderLine(
                 record.Id,
-                record.GetAttributeValue<string>(WorkOrderLineColumns.Description) ?? "(no description)",
-                record.GetAttributeValue<int>(WorkOrderLineColumns.Quantity),
-                DomainMoney.Of(record.GetAttributeValue<XrmMoney>(WorkOrderLineColumns.UnitPrice)?.Value ?? 0m)))
+                record.GetAttributeValue<string>(WorkOrderLineSchema.Description) ?? "(no description)",
+                record.GetAttributeValue<int>(WorkOrderLineSchema.Quantity),
+                DomainMoney.Of(record.GetAttributeValue<XrmMoney>(WorkOrderLineSchema.UnitPrice)?.Value ?? 0m)))
             .ToList();
     }
 }

@@ -1,5 +1,5 @@
 using DynamicsCrmLab.Infrastructure.Dataverse;
-using DynamicsCrmLab.Infrastructure.Dataverse.Schema;
+using DynamicsCrmLab.Schema;
 using Microsoft.Crm.Sdk.Messages;
 using Microsoft.Xrm.Sdk.Query;
 

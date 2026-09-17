@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\DynamicsCrmLab.Application\DynamicsCrmLab.Application.csproj" />
+    <ProjectReference Include="..\DynamicsCrmLab.Schema\DynamicsCrmLab.Schema.csproj" />
   </ItemGroup>
 
 </Project>

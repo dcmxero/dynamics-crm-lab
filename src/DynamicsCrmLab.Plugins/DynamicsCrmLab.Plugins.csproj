@@ -23,6 +23,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\DynamicsCrmLab.Domain\DynamicsCrmLab.Domain.csproj" />
+    <ProjectReference Include="..\DynamicsCrmLab.Schema\DynamicsCrmLab.Schema.csproj" />
   </ItemGroup>
 
 </Project>

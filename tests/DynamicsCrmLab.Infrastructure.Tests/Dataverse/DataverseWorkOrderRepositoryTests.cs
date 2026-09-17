@@ -1,6 +1,6 @@
 using DynamicsCrmLab.Domain.WorkOrders;
 using DynamicsCrmLab.Infrastructure.Dataverse.Repositories;
-using DynamicsCrmLab.Infrastructure.Dataverse.Schema;
+using DynamicsCrmLab.Schema;
 using FluentAssertions;
 using Microsoft.Xrm.Sdk;
 using Xunit;

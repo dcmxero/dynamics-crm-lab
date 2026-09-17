@@ -1,5 +1,5 @@
 using DynamicsCrmLab.Domain.WorkOrders;
-using DynamicsCrmLab.Infrastructure.Dataverse.Schema;
+using DynamicsCrmLab.Schema;
 using Microsoft.Xrm.Sdk;
 
 // Dataverse and the domain both define a Money type; the aliases say which is meant.
