@@ -1,6 +1,7 @@
 using System;
 using DynamicsCrmLab.Domain.WorkOrders;
 using DynamicsCrmLab.Plugins.Infrastructure;
+using DynamicsCrmLab.Schema;
 using Microsoft.Xrm.Sdk;
 
 namespace DynamicsCrmLab.Plugins.WorkOrders;
@@ -25,12 +26,12 @@ public sealed class WorkOrderClosedNotificationPlugin()
     {
         var target = context.Target;
 
-        if (target is null || !string.Equals(target.LogicalName, WorkOrderColumns.EntityName, StringComparison.Ordinal))
+        if (target is null || !string.Equals(target.LogicalName, WorkOrderSchema.EntityName, StringComparison.Ordinal))
         {
             return;
         }
 
-        var status = target.GetAttributeValue<OptionSetValue>(WorkOrderColumns.Status);
+        var status = target.GetAttributeValue<OptionSetValue>(WorkOrderSchema.Status);
 
         // The filtering attribute should already have kept other changes out,
         // but a registration can be edited and this costs nothing to confirm.
@@ -42,7 +43,7 @@ public sealed class WorkOrderClosedNotificationPlugin()
         // The pre image already carries the previous state, so there is no
         // reason to read the record back out of the platform.
         var preImage = context.PreImage();
-        var previousStatus = preImage?.GetAttributeValue<OptionSetValue>(WorkOrderColumns.Status)?.Value;
+        var previousStatus = preImage?.GetAttributeValue<OptionSetValue>(WorkOrderSchema.Status)?.Value;
 
         if (previousStatus == status.Value)
         {
@@ -51,13 +52,13 @@ public sealed class WorkOrderClosedNotificationPlugin()
             return;
         }
 
-        var number = preImage?.GetAttributeValue<string>(WorkOrderColumns.Number) ?? target.Id.ToString();
+        var number = preImage?.GetAttributeValue<string>(WorkOrderSchema.Number) ?? target.Id.ToString();
 
         context.Service.Create(new Entity("task")
         {
             ["subject"] = $"Invoice work order {number}",
             ["description"] = "The job is closed and the total is ready to be invoiced.",
-            ["regardingobjectid"] = new EntityReference(WorkOrderColumns.EntityName, target.Id),
+            ["regardingobjectid"] = new EntityReference(WorkOrderSchema.EntityName, target.Id),
             ["scheduledend"] = DateTime.UtcNow.AddDays(1)
         });
 

@@ -1,7 +1,7 @@
 using DynamicsCrmLab.Application.Abstractions;
 using DynamicsCrmLab.Domain.WorkOrders;
 using DynamicsCrmLab.Infrastructure.Dataverse.Mapping;
-using DynamicsCrmLab.Infrastructure.Dataverse.Schema;
+using DynamicsCrmLab.Schema;
 using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Query;
 

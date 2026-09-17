@@ -2,7 +2,7 @@ using DynamicsCrmLab.Application.Abstractions;
 using DynamicsCrmLab.Domain.Customers;
 using DynamicsCrmLab.Domain.Equipments;
 using DynamicsCrmLab.Domain.Technicians;
-using DynamicsCrmLab.Infrastructure.Dataverse.Schema;
+using DynamicsCrmLab.Schema;
 using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Query;
 

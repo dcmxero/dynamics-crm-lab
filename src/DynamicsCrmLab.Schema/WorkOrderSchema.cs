@@ -1,4 +1,4 @@
-namespace DynamicsCrmLab.Infrastructure.Dataverse.Schema;
+namespace DynamicsCrmLab.Schema;
 
 /// <summary>
 /// Provides the logical names of the work order table and its columns.
@@ -33,6 +33,9 @@ public static class WorkOrderSchema
 
     /// <summary>The account of the work carried out.</summary>
     public const string Resolution = "dcl_resolution";
+
+    /// <summary>The amount to invoice, written by the pricing plug-in.</summary>
+    public const string TotalPrice = "dcl_totalprice";
 
     /// <summary>
     /// Gets the columns needed to rebuild the aggregate.

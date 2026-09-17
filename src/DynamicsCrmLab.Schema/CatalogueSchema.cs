@@ -1,4 +1,4 @@
-namespace DynamicsCrmLab.Infrastructure.Dataverse.Schema;
+namespace DynamicsCrmLab.Schema;
 
 /// <summary>
 /// Provides the logical names used for customers, which map to the stock
