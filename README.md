@@ -13,10 +13,12 @@ src/
   DynamicsCrmLab.Application   use cases and the ports they talk to
   DynamicsCrmLab.Infrastructure  Dataverse connection, mapping, repositories
   DynamicsCrmLab.Cli           console front end
+  DynamicsCrmLab.Plugins       plug-ins that run inside Dataverse
 tests/
   DynamicsCrmLab.Domain.Tests
   DynamicsCrmLab.Application.Tests
   DynamicsCrmLab.Infrastructure.Tests
+  DynamicsCrmLab.Plugins.Tests
 ```
 
 The domain layer references nothing at all. Rules live inside the entities, so
@@ -48,6 +50,24 @@ columns they need rather than all of them, carry the paging cookie between
 pages, and read the lines of a whole page in one query.
 
 A free environment to point them at: [Power Apps Developer Plan](https://aka.ms/PowerAppsDevPlan).
+
+## Plug-ins
+
+Dataverse runs plug-ins on .NET Framework 4.6.2, so the domain is built for both
+`net10.0` and `netstandard2.0` and the plug-ins use the same rules as the console
+application rather than a second copy that would drift.
+
+| Plug-in | Registration |
+|---|---|
+| `WorkOrderPricingPlugin` | Create and Update of `dcl_workorder`, PreOperation, synchronous |
+| `WorkOrderClosedNotificationPlugin` | Update of `dcl_workorder`, filtering attribute `dcl_status`, PostOperation, **asynchronous**, pre image `dcl_status` and `dcl_number` |
+
+Pricing runs in PreOperation and writes onto the target, so the platform saves
+the value with the rest of the record instead of a second update that could
+retrigger the plug-in. The notification runs asynchronously because nobody
+saving the form needs to wait for a follow-up task to exist.
+
+Tests run against an in-memory Dataverse, so they need no environment either.
 
 ## Requirements
 
