@@ -63,3 +63,13 @@ dotnet_diagnostic.CA1707.severity = none
 # The test runner has no synchronization context to capture, so ConfigureAwait
 # would add noise without preventing anything.
 dotnet_diagnostic.CA2007.severity = none
+
+# String literals read better than Uri instances when the point of the test is
+# the exact route being called.
+dotnet_diagnostic.CA2234.severity = none
+
+# xUnit requires class fixtures to be public, so they cannot be internal.
+dotnet_diagnostic.CA1515.severity = none
+
+# Test names describe a scenario. One that starts with Raise is not an event.
+dotnet_diagnostic.CA1030.severity = none

@@ -12,6 +12,7 @@ src/
   DynamicsCrmLab.Domain        business rules, no dependencies
   DynamicsCrmLab.Application   use cases and the ports they talk to
   DynamicsCrmLab.Infrastructure  Dataverse connection, mapping, repositories
+  DynamicsCrmLab.Api           HTTP API the web client talks to
   DynamicsCrmLab.Cli           console front end
   DynamicsCrmLab.Plugins       plug-ins that run inside Dataverse
   DynamicsCrmLab.Schema        Dataverse logical names shared by both sides
@@ -72,6 +73,35 @@ retrigger the plug-in. The notification runs asynchronously because nobody
 saving the form needs to wait for a follow-up task to exist.
 
 Tests run against an in-memory Dataverse, so they need no environment either.
+
+## The API
+
+The web client does not talk to Dataverse directly. It talks to
+`DynamicsCrmLab.Api`, which reuses the same use cases as the console
+application.
+
+That choice is deliberate. A browser holding a Dataverse token holds the full
+permissions of the signed-in user, the OData shapes would have to be mapped a
+second time in TypeScript, and the rules would either be duplicated there or
+lost. Keeping a backend means the token stays on the server and the rules stay
+in one place.
+
+```bash
+cd src/DynamicsCrmLab.Api
+dotnet user-secrets set "Dataverse:Url" "https://your-org.crm4.dynamics.com"
+dotnet run        # OpenAPI document at /openapi/v1.json
+```
+
+| Route | Purpose |
+|---|---|
+| `GET /api/work-orders?status=&take=` | jobs that have reached a stage |
+| `GET /api/work-orders/{id}` | one job in full |
+| `POST /api/work-orders` | raise a job |
+| `POST /api/work-orders/{id}/assignment` | put a technician on it |
+| `POST /api/work-orders/{id}/closure` | finish it |
+
+Failures come back as problem details. A missing record is 404; a request that
+is well formed but which the state of the job does not allow is 422.
 
 ## Custom UI
 
