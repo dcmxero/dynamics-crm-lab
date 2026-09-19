@@ -1,0 +1,72 @@
+<h1>Raise a work order</h1>
+
+<form [formGroup]="form" (ngSubmit)="submit()" class="form">
+  <mat-form-field appearance="outline">
+    <mat-label>Customer</mat-label>
+    <input matInput formControlName="customerId" placeholder="Identifier of the contact" />
+    @if (form.controls.customerId.touched && form.controls.customerId.invalid) {
+      <mat-error>Enter the identifier of an existing customer.</mat-error>
+    }
+  </mat-form-field>
+
+  <mat-form-field appearance="outline">
+    <mat-label>Equipment</mat-label>
+    <input matInput formControlName="equipmentId" placeholder="Identifier of the unit" />
+    @if (form.controls.equipmentId.touched && form.controls.equipmentId.invalid) {
+      <mat-error>Enter the identifier of an existing piece of equipment.</mat-error>
+    }
+  </mat-form-field>
+
+  <h2>Charges</h2>
+
+  <div formArrayName="lines" class="lines">
+    @for (line of lines.controls; track $index; let i = $index) {
+      <div [formGroupName]="i" class="line">
+        <mat-form-field appearance="outline" class="description">
+          <mat-label>Description</mat-label>
+          <input matInput formControlName="description" />
+          @if (line.get('description')?.touched && line.get('description')?.invalid) {
+            <mat-error>A charge needs a description.</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="quantity">
+          <mat-label>Quantity</mat-label>
+          <input matInput type="number" min="1" formControlName="quantity" />
+          @if (line.get('quantity')?.touched && line.get('quantity')?.invalid) {
+            <mat-error>Must be at least one.</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="unit-price">
+          <mat-label>Unit price</mat-label>
+          <input matInput type="number" min="0" step="0.01" formControlName="unitPrice" />
+          @if (line.get('unitPrice')?.touched && line.get('unitPrice')?.invalid) {
+            <mat-error>Cannot be negative.</mat-error>
+          }
+        </mat-form-field>
+
+        <button
+          mat-icon-button
+          type="button"
+          (click)="removeLine(i)"
+          [attr.aria-label]="'Remove charge ' + (i + 1)"
+        >
+          <mat-icon>delete</mat-icon>
+        </button>
+      </div>
+    }
+  </div>
+
+  <button mat-stroked-button type="button" (click)="addLine()">Add a charge</button>
+
+  @if (failure(); as problem) {
+    <mat-card appearance="outlined" class="failure" role="alert">
+      <mat-card-content>{{ problem.message }}</mat-card-content>
+    </mat-card>
+  }
+
+  <button mat-flat-button type="submit" [disabled]="submitting()" class="submit">
+    Raise the job
+  </button>
+</form>
