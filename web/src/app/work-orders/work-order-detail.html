@@ -1,0 +1,95 @@
+@if (loading()) {
+  <mat-progress-bar mode="indeterminate" aria-label="Loading the work order" />
+}
+
+@if (failure(); as problem) {
+  <mat-card appearance="outlined" role="alert">
+    <mat-card-content>
+      <p>{{ problem.message }}</p>
+      <button mat-stroked-button type="button" (click)="load()">Try again</button>
+    </mat-card-content>
+  </mat-card>
+}
+
+@if (job(); as order) {
+  <h1>{{ order.number }}</h1>
+
+  <dl class="facts">
+    <dt>Stage</dt>
+    <dd>{{ labels[order.status] }}</dd>
+
+    <dt>Technician</dt>
+    <dd>{{ order.technicianId ?? 'Not assigned' }}</dd>
+
+    <dt>Total</dt>
+    <dd>{{ order.totalPrice | currency: order.currency }}</dd>
+
+    @if (order.resolution) {
+      <dt>Resolution</dt>
+      <dd>{{ order.resolution }}</dd>
+    }
+  </dl>
+
+  <h2>Charges</h2>
+
+  @if (order.lines.length === 0) {
+    <p class="empty">Nothing has been charged to this job yet.</p>
+  } @else {
+    <table mat-table [dataSource]="order.lines" class="lines">
+      <ng-container matColumnDef="description">
+        <th mat-header-cell *matHeaderCellDef scope="col">Description</th>
+        <td mat-cell *matCellDef="let line">{{ line.description }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="quantity">
+        <th mat-header-cell *matHeaderCellDef scope="col">Quantity</th>
+        <td mat-cell *matCellDef="let line">{{ line.quantity }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="unitPrice">
+        <th mat-header-cell *matHeaderCellDef scope="col">Unit price</th>
+        <td mat-cell *matCellDef="let line">{{ line.unitPrice | currency: order.currency }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="lineTotal">
+        <th mat-header-cell *matHeaderCellDef scope="col">Line total</th>
+        <td mat-cell *matCellDef="let line">{{ line.lineTotal | currency: order.currency }}</td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="columns"></tr>
+      <tr mat-row *matRowDef="let row; columns: columns"></tr>
+    </table>
+  }
+
+  <h2>Actions</h2>
+
+  <div class="actions">
+    <button
+      mat-flat-button
+      type="button"
+      [disabled]="working() || order.status === 'Closed'"
+      (click)="assign()"
+    >
+      Assign a free technician
+    </button>
+  </div>
+
+  <form class="closure" [formGroup]="closure" (ngSubmit)="close()">
+    <mat-form-field appearance="outline" class="resolution">
+      <mat-label>Resolution</mat-label>
+      <textarea
+        matInput
+        rows="3"
+        formControlName="resolution"
+        placeholder="What was done"
+      ></textarea>
+      @if (closure.controls.resolution.touched && closure.controls.resolution.invalid) {
+        <mat-error>A closed job needs an account of the work.</mat-error>
+      }
+    </mat-form-field>
+
+    <button mat-flat-button type="submit" [disabled]="working() || order.status === 'Closed'">
+      Close the job
+    </button>
+  </form>
+}

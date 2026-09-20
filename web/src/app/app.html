@@ -1,0 +1,14 @@
+<mat-toolbar color="primary">
+  <a routerLink="/work-orders" class="brand" aria-label="Go to the work order list">
+    <mat-icon aria-hidden="true">handyman</mat-icon>
+    <span>Field service</span>
+  </a>
+
+  <span class="spacer"></span>
+
+  <a mat-button routerLink="/work-orders/new">Raise a job</a>
+</mat-toolbar>
+
+<main id="content" class="content">
+  <router-outlet />
+</main>

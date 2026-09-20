@@ -16,6 +16,7 @@ src/
   DynamicsCrmLab.Cli           console front end
   DynamicsCrmLab.Plugins       plug-ins that run inside Dataverse
   DynamicsCrmLab.Schema        Dataverse logical names shared by both sides
+web/                           Angular client
 pcf/
   WorkOrderStatusTrack         status track control for model-driven forms
 solutions/                     the Dataverse solution, unpacked
@@ -102,6 +103,32 @@ dotnet run        # OpenAPI document at /openapi/v1.json
 
 Failures come back as problem details. A missing record is 404; a request that
 is well formed but which the state of the job does not allow is 422.
+
+## The web client
+
+`web/` is an Angular 22 application in zoneless mode: standalone components,
+signals for state, Material for the widgets, and one lazily loaded chunk per
+screen.
+
+```bash
+cd web
+npm install
+npm start           # proxies /api to the backend on https://localhost:7134
+
+npm run lint
+npm test            # unit tests
+npm run e2e         # Playwright, including an axe scan of every screen
+npm run build
+```
+
+Every failed call goes through one interceptor that reduces problem details to
+a single shape, so no component digs around in an error body. A 422 is shown as
+the job answering back rather than as a fault: a rule the current state does not
+allow is not the same thing as something going wrong.
+
+The Playwright suite stubs the API at the network layer, so it exercises the
+client on its own. What the server does with a request is covered by the API
+tests instead.
 
 ## Custom UI
 
