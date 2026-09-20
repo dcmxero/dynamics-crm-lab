@@ -1,6 +1,6 @@
 import { CurrencyPipe } from '@angular/common';
 import { Component, inject, input, signal } from '@angular/core';
-import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -28,6 +28,7 @@ import { ApiFailure, WORK_ORDER_STATUS_LABELS, WorkOrder } from '../core/work-or
   styleUrl: './work-order-detail.scss',
 })
 export class WorkOrderDetail {
+  private readonly builder = inject(FormBuilder);
   private readonly workOrders = inject(WorkOrderService);
   private readonly snackBar = inject(MatSnackBar);
 
@@ -43,9 +44,13 @@ export class WorkOrderDetail {
   protected readonly working = signal(false);
   protected readonly failure = signal<ApiFailure | null>(null);
 
-  protected readonly resolution = new FormControl('', {
-    nonNullable: true,
-    validators: [Validators.required, Validators.maxLength(2000)],
+  /**
+   * A group rather than a lone control: ReactiveFormsModule only attaches a
+   * directive to a form that carries [formGroup], and without one the ngSubmit
+   * event never fires.
+   */
+  protected readonly closure = this.builder.nonNullable.group({
+    resolution: ['', [Validators.required, Validators.maxLength(2000)]],
   });
 
   constructor() {
@@ -77,13 +82,13 @@ export class WorkOrderDetail {
   }
 
   protected close(): void {
-    if (this.resolution.invalid) {
-      this.resolution.markAsTouched();
+    if (this.closure.invalid) {
+      this.closure.markAllAsTouched();
       return;
     }
 
     this.run(
-      this.workOrders.close(this.id(), this.resolution.getRawValue()),
+      this.workOrders.close(this.id(), this.closure.getRawValue().resolution),
       (closed) => `${closed.number} closed, ${closed.totalPrice} ${closed.currency} to invoice.`,
     );
   }

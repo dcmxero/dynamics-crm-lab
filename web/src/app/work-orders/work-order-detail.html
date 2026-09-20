@@ -74,11 +74,16 @@
     </button>
   </div>
 
-  <form class="closure" (ngSubmit)="close()">
+  <form class="closure" [formGroup]="closure" (ngSubmit)="close()">
     <mat-form-field appearance="outline" class="resolution">
       <mat-label>Resolution</mat-label>
-      <textarea matInput rows="3" [formControl]="resolution" placeholder="What was done"></textarea>
-      @if (resolution.touched && resolution.hasError('required')) {
+      <textarea
+        matInput
+        rows="3"
+        formControlName="resolution"
+        placeholder="What was done"
+      ></textarea>
+      @if (closure.controls.resolution.touched && closure.controls.resolution.invalid) {
         <mat-error>A closed job needs an account of the work.</mat-error>
       }
     </mat-form-field>

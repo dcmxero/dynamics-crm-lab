@@ -38,9 +38,7 @@ describe('WorkOrderService', () => {
   });
 
   it('posts a new job to the collection', () => {
-    service
-      .raise({ customerId: 'c', equipmentId: 'e', lines: [] })
-      .subscribe();
+    service.raise({ customerId: 'c', equipmentId: 'e', lines: [] }).subscribe();
 
     const request = backend.expectOne('/api/work-orders');
 
