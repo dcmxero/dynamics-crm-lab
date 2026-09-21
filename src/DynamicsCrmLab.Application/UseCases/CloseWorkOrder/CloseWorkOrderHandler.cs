@@ -53,13 +53,15 @@ public sealed class CloseWorkOrderHandler(
         try
         {
             workOrder.Close(command.Resolution);
+
+            // The store enforces rules of its own, and a rule it refuses is the
+            // same kind of answer as one the aggregate refuses.
+            await workOrders.UpdateAsync(workOrder, cancellationToken).ConfigureAwait(false);
         }
         catch (DomainException exception)
         {
             return Result.RuleBroken<CloseWorkOrderResult>(exception.Message);
         }
-
-        await workOrders.UpdateAsync(workOrder, cancellationToken).ConfigureAwait(false);
 
         ApplicationLog.WorkOrderClosed(logger, workOrder.Number, workOrder.TotalPrice);
 

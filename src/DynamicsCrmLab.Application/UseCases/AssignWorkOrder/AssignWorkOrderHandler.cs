@@ -66,13 +66,15 @@ public sealed class AssignWorkOrderHandler(
         try
         {
             workOrder.AssignTo(technician.Id);
+
+            // The store enforces rules of its own, and a rule it refuses is the
+            // same kind of answer as one the aggregate refuses.
+            await workOrders.UpdateAsync(workOrder, cancellationToken).ConfigureAwait(false);
         }
         catch (DomainException exception)
         {
             return Result.RuleBroken<AssignWorkOrderResult>(exception.Message);
         }
-
-        await workOrders.UpdateAsync(workOrder, cancellationToken).ConfigureAwait(false);
 
         ApplicationLog.WorkOrderAssigned(logger, workOrder.Number, technician.FullName);
 

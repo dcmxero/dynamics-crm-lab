@@ -67,8 +67,17 @@ application rather than a second copy that would drift.
 
 | Plug-in | Registration |
 |---|---|
+| `WorkOrderLifecyclePlugin` | Update of `dcl_workorder`, filtering attribute `dcl_status`, PreOperation, synchronous, pre image of the stage, technician and resolution |
+| `ClosedWorkOrderLinesPlugin` | Create, Update and Delete of `dcl_workorderline`, PreOperation, synchronous, pre image `dcl_workorderid` |
 | `WorkOrderPricingPlugin` | Create, Update and Delete of `dcl_workorderline`, PostOperation, synchronous, pre image `dcl_workorderid` |
 | `WorkOrderClosedNotificationPlugin` | Update of `dcl_workorder`, filtering attribute `dcl_status`, PostOperation, **asynchronous**, pre image `dcl_status` and `dcl_number` |
+
+The lifecycle rules run where the data lives, not only where the application
+does. A bulk edit, a flow, or somebody in the maker portal writing straight to
+the table would otherwise be able to close a job nobody started or reopen one
+that is finished. The plug-in does not restate the rules: it rebuilds the stage
+the job came from into the aggregate and asks the aggregate to make the move, so
+the platform gives the same answer the API gives.
 
 Pricing is triggered by the line rather than by the job: a job is saved before
 its lines exist, so a step on the job would add up an empty list. The
@@ -141,6 +150,18 @@ The Playwright suite stubs the API at the network layer, so it exercises the
 client on its own. What the server does with a request is covered by the API
 tests instead.
 
+## The model-driven app
+
+`Field Service` is the app the solution carries: work orders, equipment,
+technicians and the customers behind them, with the lifecycle plug-ins holding
+the rules underneath. The work order form binds the stage column to the code
+component below rather than to the stock choice control.
+
+An app, a form layout and a site map are the parts of this that are made by
+clicking rather than by writing, which is what the unpacked solution in
+`solutions/` is for: they are reviewed and moved between environments as files
+like everything else.
+
 ## Custom UI
 
 `pcf/WorkOrderStatusTrack` is a Power Apps component framework control that
@@ -211,6 +232,13 @@ cleanly. Nothing is changed by hand in a downstream environment.
 Values that differ per environment - addresses, keys, switches - belong in
 environment variables rather than in the solution, and connections used by flows
 in connection references.
+
+Two things do not travel in the solution and have to exist in the target
+environment before anything works: an application user for the registration the
+tools sign in as, with a security role, and the data itself. A managed import
+carrying the tables, the plug-in package and its steps has been through a
+freshly created environment and the rules refuse there what they refuse at
+home, which is the point of shipping the rules with the schema.
 
 Two workflows cover this:
 

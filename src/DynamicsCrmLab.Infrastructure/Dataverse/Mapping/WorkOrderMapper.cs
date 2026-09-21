@@ -17,15 +17,15 @@ namespace DynamicsCrmLab.Infrastructure.Dataverse.Mapping;
 /// </remarks>
 internal static class WorkOrderMapper
 {
-    private const string DefaultCurrency = "EUR";
 
     /// <summary>
     /// Rebuilds the aggregate from a work order row and its line rows.
     /// </summary>
     /// <param name="record">The work order row.</param>
     /// <param name="lineRecords">The line rows belonging to it.</param>
+    /// <param name="currency">The currency the rows hold their money in.</param>
     /// <returns>The restored work order.</returns>
-    public static WorkOrder ToDomain(Entity record, IEnumerable<Entity> lineRecords)
+    public static WorkOrder ToDomain(Entity record, IEnumerable<Entity> lineRecords, string currency)
     {
         ArgumentNullException.ThrowIfNull(record);
         ArgumentNullException.ThrowIfNull(lineRecords);
@@ -39,15 +39,16 @@ internal static class WorkOrderMapper
             (WorkOrderStatus)(record.GetAttributeValue<OptionSetValue>(WorkOrderSchema.Status)?.Value
                               ?? (int)WorkOrderStatus.New),
             record.GetAttributeValue<string>(WorkOrderSchema.Resolution),
-            lineRecords.Select(ToDomainLine));
+            lineRecords.Select(line => ToDomainLine(line, currency)));
     }
 
     /// <summary>
     /// Builds the row written when a work order is first stored.
     /// </summary>
     /// <param name="workOrder">The work order to store.</param>
+    /// <param name="currencyId">The currency the money on the job is held in.</param>
     /// <returns>A complete work order row.</returns>
-    public static Entity ToRecord(WorkOrder workOrder)
+    public static Entity ToRecord(WorkOrder workOrder, Guid currencyId)
     {
         ArgumentNullException.ThrowIfNull(workOrder);
 
@@ -56,7 +57,11 @@ internal static class WorkOrderMapper
             [WorkOrderSchema.Number] = workOrder.Number,
             [WorkOrderSchema.Customer] = new EntityReference(ContactSchema.EntityName, workOrder.CustomerId),
             [WorkOrderSchema.Equipment] = new EntityReference(EquipmentSchema.EntityName, workOrder.EquipmentId),
-            [WorkOrderSchema.Status] = new OptionSetValue((int)workOrder.Status)
+            [WorkOrderSchema.Status] = new OptionSetValue((int)workOrder.Status),
+
+            // Said rather than left to the platform, so that what the API
+            // reports back is what was actually stored.
+            [WorkOrderSchema.Currency] = new EntityReference(CurrencySchema.EntityName, currencyId)
         };
     }
 
@@ -80,11 +85,11 @@ internal static class WorkOrderMapper
             [WorkOrderSchema.Resolution] = workOrder.Resolution
         };
 
-        if (workOrder.TechnicianId is { } technicianId)
-        {
-            record[WorkOrderSchema.Technician] =
-                new EntityReference(TechnicianSchema.EntityName, technicianId);
-        }
+        // Written even when there is nobody on the job: leaving it out would
+        // mean a job could be assigned but never unassigned.
+        record[WorkOrderSchema.Technician] = workOrder.TechnicianId is { } technicianId
+            ? new EntityReference(TechnicianSchema.EntityName, technicianId)
+            : null;
 
         return record;
     }
@@ -94,8 +99,9 @@ internal static class WorkOrderMapper
     /// </summary>
     /// <param name="line">The line to store.</param>
     /// <param name="workOrderId">The work order the line belongs to.</param>
+    /// <param name="currencyId">The currency the price is held in.</param>
     /// <returns>A work order line row.</returns>
-    public static Entity ToLineRecord(WorkOrderLine line, Guid workOrderId)
+    public static Entity ToLineRecord(WorkOrderLine line, Guid workOrderId, Guid currencyId)
     {
         ArgumentNullException.ThrowIfNull(line);
 
@@ -104,15 +110,16 @@ internal static class WorkOrderMapper
             [WorkOrderLineSchema.WorkOrder] = new EntityReference(WorkOrderSchema.EntityName, workOrderId),
             [WorkOrderLineSchema.Description] = line.Description,
             [WorkOrderLineSchema.Quantity] = line.Quantity,
-            [WorkOrderLineSchema.UnitPrice] = new XrmMoney(line.UnitPrice.Amount)
+            [WorkOrderLineSchema.UnitPrice] = new XrmMoney(line.UnitPrice.Amount),
+            [WorkOrderLineSchema.Currency] = new EntityReference(CurrencySchema.EntityName, currencyId)
         };
     }
 
-    private static WorkOrderLine ToDomainLine(Entity record) =>
+    private static WorkOrderLine ToDomainLine(Entity record, string currency) =>
         new(record.Id,
             record.GetAttributeValue<string>(WorkOrderLineSchema.Description) ?? "(no description)",
             record.GetAttributeValue<int>(WorkOrderLineSchema.Quantity),
             DomainMoney.Of(
                 record.GetAttributeValue<XrmMoney>(WorkOrderLineSchema.UnitPrice)?.Value ?? 0m,
-                DefaultCurrency));
+                currency));
 }

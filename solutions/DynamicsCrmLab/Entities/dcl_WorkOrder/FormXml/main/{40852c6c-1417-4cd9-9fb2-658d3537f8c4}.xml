@@ -5,7 +5,7 @@
     <IntroducedVersion>1.0.0.0</IntroducedVersion>
     <FormPresentation>1</FormPresentation>
     <FormActivationState>1</FormActivationState>
-    <form>
+    <form headerdensity="HighWithControls">
       <tabs>
         <tab verticallayout="true" id="{4d6f102b-5249-4785-8bec-e4623d6282a7}" IsUserDefined="1">
           <labels>
@@ -35,6 +35,54 @@
                         <control id="ownerid" classid="{270BD3DB-D9AF-4782-9025-509E298DEC0A}" datafieldname="ownerid" />
                       </cell>
                     </row>
+                    <row>
+                      <cell id="{69288fc3-ddf5-4d15-951a-75e263bad9e5}" locklevel="0" colspan="1" rowspan="1">
+                        <labels>
+                          <label description="Stage" languagecode="1051" />
+                        </labels>
+                        <control id="dcl_status" classid="{F9A8A302-114E-466A-B582-6771B2AE0D92}" datafieldname="dcl_status" disabled="false" uniqueid="{356a8db8-abb1-4753-ba5f-8207ef431b10}" />
+                      </cell>
+                    </row>
+                    <row>
+                      <cell id="{ca39541d-2e13-46ee-a2b5-64a7e95cd84e}" locklevel="0" colspan="1" rowspan="1">
+                        <labels>
+                          <label description="Customer" languagecode="1051" />
+                        </labels>
+                        <control id="dcl_customerid" classid="{270BD3DB-D9AF-4782-9025-509E298DEC0A}" datafieldname="dcl_customerid" disabled="false" />
+                      </cell>
+                    </row>
+                    <row>
+                      <cell id="{6313f329-e95c-45bd-9e38-6fde3998aed6}" locklevel="0" colspan="1" rowspan="1">
+                        <labels>
+                          <label description="Equipment" languagecode="1051" />
+                        </labels>
+                        <control id="dcl_equipmentid" classid="{270BD3DB-D9AF-4782-9025-509E298DEC0A}" datafieldname="dcl_equipmentid" disabled="false" />
+                      </cell>
+                    </row>
+                    <row>
+                      <cell id="{892e523e-84c4-4e1d-9aa1-2961908673db}" locklevel="0" colspan="1" rowspan="1">
+                        <labels>
+                          <label description="Technician" languagecode="1051" />
+                        </labels>
+                        <control id="dcl_technicianid" classid="{270BD3DB-D9AF-4782-9025-509E298DEC0A}" datafieldname="dcl_technicianid" disabled="false" />
+                      </cell>
+                    </row>
+                    <row>
+                      <cell id="{082bd702-5a99-4a5c-b4a8-d4c01a018835}" locklevel="0" colspan="1" rowspan="1">
+                        <labels>
+                          <label description="Total price" languagecode="1051" />
+                        </labels>
+                        <control id="dcl_totalprice" classid="{533B9E00-756B-4312-95A0-DC888637AC78}" datafieldname="dcl_totalprice" disabled="false" />
+                      </cell>
+                    </row>
+                    <row>
+                      <cell id="{4b4c758f-ae11-4d6b-ac70-8f3e6cc3fe02}" locklevel="0" colspan="1" rowspan="1">
+                        <labels>
+                          <label description="Resolution" languagecode="1051" />
+                        </labels>
+                        <control id="dcl_resolution" classid="{E0DECE4B-6FC8-4A8F-A065-082708572369}" datafieldname="dcl_resolution" disabled="false" />
+                      </cell>
+                    </row>
                   </rows>
                 </section>
               </sections>
@@ -42,6 +90,75 @@
           </columns>
         </tab>
       </tabs>
+      <header id="{7543094d-7623-4932-89ba-f6013130f3dc}" celllabelposition="Top" columns="111" labelwidth="115" celllabelalignment="Left">
+        <rows>
+          <row>
+            <cell id="{8f20e461-b4fd-49fe-861a-0ed22954e05e}" showlabel="false">
+              <labels>
+                <label description="" languagecode="1051" />
+              </labels>
+            </cell>
+            <cell id="{085365c9-b5bf-461a-9ef6-28c4d6822f86}" showlabel="false">
+              <labels>
+                <label description="" languagecode="1051" />
+              </labels>
+            </cell>
+            <cell id="{23b577f6-b081-4ba9-a454-cc3cb37af0b3}" showlabel="false">
+              <labels>
+                <label description="" languagecode="1051" />
+              </labels>
+            </cell>
+          </row>
+        </rows>
+      </header>
+      <footer id="{f23fcbf9-b369-499a-bf87-db6880df5604}" celllabelposition="Top" columns="111" labelwidth="115" celllabelalignment="Left">
+        <rows>
+          <row>
+            <cell id="{9c9c8e6b-0697-43a7-be9d-fa91d5e37989}" showlabel="false">
+              <labels>
+                <label description="" languagecode="1051" />
+              </labels>
+            </cell>
+            <cell id="{480e4d47-705d-4f65-8564-108e6ac87f48}" showlabel="false">
+              <labels>
+                <label description="" languagecode="1051" />
+              </labels>
+            </cell>
+            <cell id="{5eb0a6cc-7020-4b1c-9c2c-0ef42c884068}" showlabel="false">
+              <labels>
+                <label description="" languagecode="1051" />
+              </labels>
+            </cell>
+          </row>
+        </rows>
+      </footer>
+      <DisplayConditions Order="0" FallbackForm="true">
+        <Everyone />
+      </DisplayConditions>
+      <controlDescriptions>
+        <controlDescription forControl="{356a8db8-abb1-4753-ba5f-8207ef431b10}">
+          <customControl id="{3EF39988-22BB-4F0B-BBBE-64B5A3748AEE}">
+            <parameters>
+              <datafieldname>dcl_status</datafieldname>
+            </parameters>
+          </customControl>
+          <customControl formFactor="0" name="dcl_DynamicsCrmLab.WorkOrderStatusTrack">
+            <parameters>
+              <status type="OptionSet">dcl_status</status>
+            </parameters>
+          </customControl>
+          <customControl formFactor="2" name="dcl_DynamicsCrmLab.WorkOrderStatusTrack">
+            <parameters>
+              <status type="OptionSet">dcl_status</status>
+            </parameters>
+          </customControl>
+          <customControl formFactor="1" name="dcl_DynamicsCrmLab.WorkOrderStatusTrack">
+            <parameters>
+              <status type="OptionSet">dcl_status</status>
+            </parameters>
+          </customControl>
+        </controlDescription>
+      </controlDescriptions>
     </form>
     <IsCustomizable>1</IsCustomizable>
     <CanBeDeleted>1</CanBeDeleted>

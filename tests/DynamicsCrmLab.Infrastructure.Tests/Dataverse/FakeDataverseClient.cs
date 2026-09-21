@@ -1,5 +1,6 @@
 using DynamicsCrmLab.Infrastructure.Dataverse;
 using Microsoft.Xrm.Sdk;
+using Microsoft.Xrm.Sdk.Messages;
 using Microsoft.Xrm.Sdk.Query;
 
 namespace DynamicsCrmLab.Infrastructure.Tests.Dataverse;
@@ -17,11 +18,23 @@ internal sealed class FakeDataverseClient : IDataverseClient
 
     public List<(string EntityName, Guid Id)> Deleted { get; } = [];
 
+    public List<OrganizationRequest> Executed { get; } = [];
+
     public List<QueryExpression> Queries { get; } = [];
 
     public ColumnSet? RetrievedColumns { get; private set; }
 
+    /// <summary>
+    /// The columns asked for per table, for a test that reads more than one.
+    /// </summary>
+    public Dictionary<string, ColumnSet> RetrievedColumnsByEntity { get; } = new(StringComparer.Ordinal);
+
     public Entity? RetrieveResult { get; set; }
+
+    /// <summary>
+    /// The row to answer with per table, for a test that reads more than one.
+    /// </summary>
+    public Dictionary<string, Entity> RetrieveResults { get; } = new(StringComparer.Ordinal);
 
     public void EnqueuePage(string entityName, EntityCollection page)
     {
@@ -47,6 +60,13 @@ internal sealed class FakeDataverseClient : IDataverseClient
         CancellationToken cancellationToken = default)
     {
         RetrievedColumns = columns;
+        RetrievedColumnsByEntity[entityName] = columns;
+
+        if (RetrieveResults.TryGetValue(entityName, out var byEntity))
+        {
+            return Task.FromResult<Entity?>(byEntity);
+        }
+
         return Task.FromResult<Entity?>(RetrieveResult ?? new Entity(entityName, id));
     }
 
@@ -83,8 +103,22 @@ internal sealed class FakeDataverseClient : IDataverseClient
 
     public Task<OrganizationResponse> ExecuteAsync(
         OrganizationRequest request,
-        CancellationToken cancellationToken = default) =>
-        Task.FromResult(new OrganizationResponse());
+        CancellationToken cancellationToken = default)
+    {
+        Executed.Add(request);
+
+        // A transaction is a batch of ordinary requests, so what it carries is
+        // recorded as though each had been sent on its own.
+        if (request is ExecuteTransactionRequest transaction)
+        {
+            foreach (var inner in transaction.Requests.OfType<CreateRequest>())
+            {
+                Created.Add(inner.Target);
+            }
+        }
+
+        return Task.FromResult<OrganizationResponse>(new ExecuteTransactionResponse());
+    }
 
     public Task DeleteAsync(string entityName, Guid id, CancellationToken cancellationToken = default)
     {

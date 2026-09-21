@@ -63,6 +63,8 @@ public sealed class RaiseWorkOrderHandler(
         }
 
         WorkOrder workOrder;
+        Guid id;
+
         try
         {
             workOrder = WorkOrder.Create(customer.Id, unit.Id);
@@ -71,6 +73,10 @@ public sealed class RaiseWorkOrderHandler(
             {
                 workOrder.AddLine(line.Description, line.Quantity, Money.Of(line.UnitPrice, line.Currency));
             }
+
+            // The store enforces rules of its own, and a rule it refuses is the
+            // same kind of answer as one the aggregate refuses.
+            id = await workOrders.AddAsync(workOrder, cancellationToken).ConfigureAwait(false);
         }
         // A value the domain refuses to build from - a negative price - arrives as
         // an argument exception rather than a broken rule, but to the caller it
@@ -83,8 +89,6 @@ public sealed class RaiseWorkOrderHandler(
 
             return Result.RuleBroken<RaiseWorkOrderResult>(exception.Message);
         }
-
-        var id = await workOrders.AddAsync(workOrder, cancellationToken).ConfigureAwait(false);
 
         ApplicationLog.WorkOrderRaised(logger, workOrder.Number, customer.Id);
 

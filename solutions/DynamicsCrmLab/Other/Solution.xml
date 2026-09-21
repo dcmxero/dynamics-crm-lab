@@ -83,9 +83,15 @@
       <RootComponent type="1" schemaName="dcl_technician" behavior="0" />
       <RootComponent type="1" schemaName="dcl_workorder" behavior="0" />
       <RootComponent type="1" schemaName="dcl_workorderline" behavior="0" />
+      <RootComponent type="62" schemaName="dcl_FieldService" behavior="0" />
       <RootComponent type="66" schemaName="dcl_DynamicsCrmLab.WorkOrderStatusTrack" behavior="0" />
+      <RootComponent type="80" schemaName="dcl_FieldService" behavior="0" />
       <RootComponent type="92" id="{78c5ba3e-9fb2-f111-aaac-7c1e522010f1}" behavior="0" />
       <RootComponent type="92" id="{7dfe09c6-a0b2-f111-aaac-7c1e522010f1}" behavior="0" />
+      <RootComponent type="92" id="{a23d5b83-cbb2-f111-aaac-7c1e522010f1}" behavior="0" />
+      <RootComponent type="92" id="{aa3d5b83-cbb2-f111-aaac-7c1e522010f1}" behavior="0" />
+      <RootComponent type="92" id="{ad3d5b83-cbb2-f111-aaac-7c1e522010f1}" behavior="0" />
+      <RootComponent type="92" id="{b33d5b83-cbb2-f111-aaac-7c1e522010f1}" behavior="0" />
       <RootComponent type="92" id="{b430f0bf-a0b2-f111-aaac-7c1e522010f1}" behavior="0" />
       <RootComponent type="92" id="{e00eb3a2-a0b2-f111-aaac-7c1e522010f1}" behavior="0" />
     </RootComponents>
@@ -93,6 +99,18 @@
       <MissingDependency>
         <Required type="1" schemaName="contact" displayName="Contact" parentSchemaName="" solution="msdynce_PortalPrivacyExtensions (9.2.10.0)" />
         <Dependent type="1" schemaName="contact" displayName="Contact" />
+      </MissingDependency>
+      <MissingDependency>
+        <Required type="61" schemaName="msdyn_/Images/AppModule_Default_Icon.png" displayName="msdyn_/Images/AppModule_Default_Icon.png" solution="AppModuleWebResources (2.5)">
+          <package appName="AppModule Web Resources Package" version="2.5">AppModuleWebResources (2.5)</package>
+        </Required>
+        <Dependent type="80" schemaName="dcl_FieldService" displayName="Field Service" />
+      </MissingDependency>
+      <MissingDependency>
+        <Required type="SettingDefinition" displayName="AppChannel" solution="msdyn_AppFrameworkInfraExtensions (1.0.0.19)" id.uniquename="AppChannel">
+          <package appName="PowerAppsAppFramework Package" version="1.0.0.25">PowerAppsAppFramework_Anchor (1.0.0.25)</package>
+        </Required>
+        <Dependent type="AppSetting" displayName="parentappmoduleid.uniquename=dcl_FieldService,settingdefinitionid.uniquename=AppChannel" id.parentappmoduleid.uniquename="dcl_FieldService" id.settingdefinitionid.uniquename="AppChannel" />
       </MissingDependency>
     </MissingDependencies>
   </SolutionManifest>

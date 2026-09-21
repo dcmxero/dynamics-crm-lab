@@ -11,6 +11,8 @@
   <optionsets />
   <CustomControls />
   <SdkMessageProcessingSteps />
+  <AppModuleSiteMaps />
+  <AppModules />
   <EntityDataProviders />
   <Languages>
     <Language>1051</Language>
