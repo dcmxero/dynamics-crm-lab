@@ -67,6 +67,34 @@ public sealed class WorkOrderPricingPluginTests
     }
 
     [Fact]
+    public void Execute_RetotalsBothJobsWhenALineMovesBetweenThem()
+    {
+        var from = Guid.NewGuid();
+        var to = Guid.NewGuid();
+
+        var context = new XrmFakedContext();
+        context.Initialize(new List<Entity>
+        {
+            new(WorkOrder, from) { ["dcl_number"] = "WO-20260901-AAAAAA" },
+            new(WorkOrder, to) { ["dcl_number"] = "WO-20260901-BBBBBB" },
+
+            // The line has already moved by the time the step runs.
+            new(WorkOrderLine, Guid.NewGuid())
+            {
+                [ParentLookup] = new EntityReference(WorkOrder, to),
+                ["dcl_description"] = "Technician labour",
+                ["dcl_quantity"] = 1,
+                ["dcl_unitprice"] = new Money(100m)
+            }
+        });
+
+        RunPlugin(context, LineOf(to), preImage: LineOf(from));
+
+        StoredTotalFor(context, to).Should().Be(100m);
+        StoredTotalFor(context, from).Should().Be(0m);
+    }
+
+    [Fact]
     public void Execute_SkipsWhenAnotherPluginTriggeredTheChange()
     {
         var workOrderId = Guid.NewGuid();
