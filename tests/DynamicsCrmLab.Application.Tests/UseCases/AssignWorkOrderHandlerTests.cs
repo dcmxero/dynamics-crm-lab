@@ -1,3 +1,4 @@
+using DynamicsCrmLab.Application.Abstractions;
 using DynamicsCrmLab.Application.Tests.Fakes;
 using DynamicsCrmLab.Application.UseCases.AssignWorkOrder;
 using DynamicsCrmLab.Domain.WorkOrders;
@@ -57,7 +58,7 @@ public sealed class AssignWorkOrderHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_FailsWhenTheNamedTechnicianIsBusy()
+    public async Task HandleAsync_RefusesTheNamedTechnicianWhoIsBusyAsABrokenRule()
     {
         var workOrder = await StoredWorkOrderAsync();
         var busy = _technicians.Add(isAvailable: false);
@@ -65,6 +66,20 @@ public sealed class AssignWorkOrderHandlerTests
         var result = await _handler.HandleAsync(new AssignWorkOrderCommand(workOrder.Id, busy.Id));
 
         result.IsSuccess.Should().BeFalse();
+        result.Failure.Should().Be(ResultFailure.RuleBroken);
+        result.Error.Should().Contain(busy.FullName);
+    }
+
+    [Fact]
+    public async Task HandleAsync_ReportsATechnicianWhoIsNotThereAsMissing()
+    {
+        var workOrder = await StoredWorkOrderAsync();
+
+        var result = await _handler.HandleAsync(new AssignWorkOrderCommand(workOrder.Id, Guid.NewGuid()));
+
+        result.IsSuccess.Should().BeFalse();
+        result.Failure.Should().Be(ResultFailure.NotFound);
+        result.Error.Should().Contain("does not exist");
     }
 
     [Fact]

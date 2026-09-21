@@ -41,13 +41,13 @@ public sealed class RaiseWorkOrderHandler(
         var customer = await customers.GetByIdAsync(command.CustomerId, cancellationToken).ConfigureAwait(false);
         if (customer is null)
         {
-            return Result.Failure<RaiseWorkOrderResult>($"Customer {command.CustomerId} does not exist.");
+            return Result.NotFound<RaiseWorkOrderResult>($"Customer {command.CustomerId} does not exist.");
         }
 
         var unit = await equipment.GetByIdAsync(command.EquipmentId, cancellationToken).ConfigureAwait(false);
         if (unit is null)
         {
-            return Result.Failure<RaiseWorkOrderResult>($"Equipment {command.EquipmentId} does not exist.");
+            return Result.NotFound<RaiseWorkOrderResult>($"Equipment {command.EquipmentId} does not exist.");
         }
 
         WorkOrder workOrder;
@@ -66,7 +66,7 @@ public sealed class RaiseWorkOrderHandler(
             // of the program, so the caller gets it as a result.
             ApplicationLog.WorkOrderRejected(logger, command.CustomerId, exception.Message);
 
-            return Result.Failure<RaiseWorkOrderResult>(exception.Message);
+            return Result.RuleBroken<RaiseWorkOrderResult>(exception.Message);
         }
 
         var id = await workOrders.AddAsync(workOrder, cancellationToken).ConfigureAwait(false);

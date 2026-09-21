@@ -61,7 +61,7 @@ public sealed class GetWorkOrderHandler(IWorkOrderRepository workOrders)
         var workOrder = await workOrders.GetByIdAsync(workOrderId, cancellationToken).ConfigureAwait(false);
 
         return workOrder is null
-            ? Result.Failure<WorkOrderView>($"Work order {workOrderId} does not exist.")
+            ? Result.NotFound<WorkOrderView>($"Work order {workOrderId} does not exist.")
             : Result.Success(ToView(workOrder));
     }
 

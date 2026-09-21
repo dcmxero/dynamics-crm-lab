@@ -54,15 +54,13 @@ public sealed class AssignWorkOrderHandler(
         var workOrder = await workOrders.GetByIdAsync(command.WorkOrderId, cancellationToken).ConfigureAwait(false);
         if (workOrder is null)
         {
-            return Result.Failure<AssignWorkOrderResult>($"Work order {command.WorkOrderId} does not exist.");
+            return Result.NotFound<AssignWorkOrderResult>($"Work order {command.WorkOrderId} does not exist.");
         }
 
-        var technician = await ResolveTechnicianAsync(command.TechnicianId, cancellationToken).ConfigureAwait(false);
-        if (technician is null)
+        var candidate = await ResolveTechnicianAsync(command.TechnicianId, cancellationToken).ConfigureAwait(false);
+        if (candidate.Technician is not { } technician)
         {
-            return Result.Failure<AssignWorkOrderResult>(command.TechnicianId is null
-                ? "No technician is available."
-                : $"Technician {command.TechnicianId} does not exist.");
+            return candidate.Failure!.Value;
         }
 
         try
@@ -71,7 +69,7 @@ public sealed class AssignWorkOrderHandler(
         }
         catch (DomainException exception)
         {
-            return Result.Failure<AssignWorkOrderResult>(exception.Message);
+            return Result.RuleBroken<AssignWorkOrderResult>(exception.Message);
         }
 
         await workOrders.UpdateAsync(workOrder, cancellationToken).ConfigureAwait(false);
@@ -81,21 +79,52 @@ public sealed class AssignWorkOrderHandler(
         return Result.Success(new AssignWorkOrderResult(workOrder.Id, technician.Id, technician.FullName));
     }
 
-    private async Task<Domain.Technicians.Technician?> ResolveTechnicianAsync(
+    /// <summary>
+    /// Finds the technician to put on the job.
+    /// </summary>
+    /// <remarks>
+    /// A technician who is not there and a technician who is there but taking
+    /// no further work are different answers: the first is a request about a
+    /// record that does not exist, the second is a rule refusing a request that
+    /// is otherwise sound. Returning nothing for both left the caller unable to
+    /// tell them apart.
+    /// </remarks>
+    private async Task<Candidate> ResolveTechnicianAsync(
         Guid? technicianId,
         CancellationToken cancellationToken)
     {
-        if (technicianId is { } id)
+        if (technicianId is not { } id)
         {
-            var named = await technicians.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
+            var available = await technicians
+                .ListAvailableAsync(CandidatesToConsider, cancellationToken)
+                .ConfigureAwait(false);
 
-            return named is { IsAvailable: true } ? named : null;
+            return available.Count is 0
+                ? new Candidate(null, Result.RuleBroken<AssignWorkOrderResult>("No technician is available."))
+                : new Candidate(available[0], null);
         }
 
-        var available = await technicians
-            .ListAvailableAsync(CandidatesToConsider, cancellationToken)
-            .ConfigureAwait(false);
+        var named = await technicians.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
 
-        return available.Count is 0 ? null : available[0];
+        return named switch
+        {
+            null => new Candidate(
+                null,
+                Result.NotFound<AssignWorkOrderResult>($"Technician {id} does not exist.")),
+            { IsAvailable: false } => new Candidate(
+                null,
+                Result.RuleBroken<AssignWorkOrderResult>(
+                    $"{named.FullName} is taking no further work.")),
+            _ => new Candidate(named, null)
+        };
     }
+
+    /// <summary>
+    /// Represents either the technician to assign or the reason there is none.
+    /// </summary>
+    /// <param name="Technician">The technician found, or <see langword="null"/>.</param>
+    /// <param name="Failure">The failure to return, or <see langword="null"/>.</param>
+    private readonly record struct Candidate(
+        Domain.Technicians.Technician? Technician,
+        Result<AssignWorkOrderResult>? Failure);
 }
