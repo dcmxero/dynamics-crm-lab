@@ -90,6 +90,11 @@ internal static class WorkOrderEndpoints
         RaiseWorkOrderRequest request,
         CancellationToken cancellationToken)
     {
+        if (Missing(request) is { } missing)
+        {
+            return TypedResults.ValidationProblem(missing);
+        }
+
         var command = new RaiseWorkOrderCommand(
             request.CustomerId,
             request.EquipmentId,
@@ -162,6 +167,34 @@ internal static class WorkOrderEndpoints
 
     private static ProblemHttpResult Failed(ResultFailure? failure, string? detail) =>
         failure is ResultFailure.NotFound ? NotFound(detail) : UnprocessableEntity(detail);
+
+    /// <summary>
+    /// Reports what the request left out.
+    /// </summary>
+    /// <remarks>
+    /// A body that parses but carries nothing where charges belong is a request
+    /// the caller can correct, so it is answered as one rather than allowed to
+    /// fail somewhere further in as a fault.
+    /// </remarks>
+    /// <param name="request">The request as it was read.</param>
+    /// <returns>The errors to report, or <see langword="null"/> when there are none.</returns>
+    private static Dictionary<string, string[]>? Missing(RaiseWorkOrderRequest request)
+    {
+        if (request.Lines is null)
+        {
+            return new Dictionary<string, string[]>(StringComparer.Ordinal)
+            {
+                ["lines"] = ["A work order needs the charges to record against it."]
+            };
+        }
+
+        return request.Lines.Any(line => line is null)
+            ? new Dictionary<string, string[]>(StringComparer.Ordinal)
+            {
+                ["lines"] = ["Every charge needs a description, a quantity and a unit price."]
+            }
+            : null;
+    }
 
     private static ProblemHttpResult NotFound(string? detail) =>
         TypedResults.Problem(

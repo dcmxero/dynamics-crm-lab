@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text;
 using System.Net.Http.Json;
 using System.Text.Json;
 using DynamicsCrmLab.Domain.Common;
@@ -210,6 +211,48 @@ public sealed class WorkOrderEndpointsTests(WorkOrderApiFactoryFixture fixture)
 
         var body = await response.Content.ReadFromJsonAsync<JsonElement>();
         body.GetProperty("technicianName").GetString().Should().Be(technician.FullName);
+    }
+
+    [Theory]
+    [InlineData("{}")]
+    [InlineData("""{"customerId":"11111111-1111-1111-1111-111111111111","lines":null}""")]
+    [InlineData("""{"customerId":"11111111-1111-1111-1111-111111111111","lines":[null]}""")]
+    public async Task Raise_AnswersABodyThatCarriesNoChargesAsABadRequest(string body)
+    {
+        using var content = new StringContent(body, Encoding.UTF8, "application/json");
+
+        var response = await _client.PostAsync("/api/work-orders", content);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Raise_AnswersABodyItCannotReadAsABadRequest()
+    {
+        using var content = new StringContent(
+            """{"customerId":"11111111-1111-1111-1111-111111111111","equipmentId":"22222222-2222-2222-2222-222222222222","lines":[{"description":"x","quantity":1.5,"unitPrice":1}]}""",
+            Encoding.UTF8,
+            "application/json");
+
+        var response = await _client.PostAsync("/api/work-orders", content);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Raise_RefusesAPriceBelowZero()
+    {
+        var customer = _factory.Store.AddCustomer();
+        var equipment = _factory.Store.AddEquipment(customer.Id);
+
+        var response = await _client.PostAsJsonAsync("/api/work-orders", new
+        {
+            customerId = customer.Id,
+            equipmentId = equipment.Id,
+            lines = new[] { new { description = "Technician labour", quantity = 1, unitPrice = -1m } }
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
     }
 
     private WorkOrder StoredWorkOrder()

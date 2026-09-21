@@ -60,7 +60,10 @@ public sealed class RaiseWorkOrderHandler(
                 workOrder.AddLine(line.Description, line.Quantity, Money.Of(line.UnitPrice, line.Currency));
             }
         }
-        catch (DomainException exception)
+        // A value the domain refuses to build from - a negative price - arrives as
+        // an argument exception rather than a broken rule, but to the caller it
+        // is the same kind of answer: the request was understood and refused.
+        catch (Exception exception) when (exception is DomainException or ArgumentException)
         {
             // A broken rule is an ordinary answer to the request, not a failure
             // of the program, so the caller gets it as a result.
