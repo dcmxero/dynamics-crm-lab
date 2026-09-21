@@ -14,6 +14,7 @@ src/
   DynamicsCrmLab.Infrastructure  Dataverse connection, mapping, repositories
   DynamicsCrmLab.Api           HTTP API the web client talks to
   DynamicsCrmLab.Cli           console front end
+  DynamicsCrmLab.Provisioning  creates the schema in an empty environment
   DynamicsCrmLab.Plugins       plug-ins that run inside Dataverse
   DynamicsCrmLab.Schema        Dataverse logical names shared by both sides
 web/                           Angular client
@@ -146,6 +147,38 @@ npm start        # harness in the browser
 
 Reaching into the form DOM from JavaScript would be unsupported and would break
 on any platform update, which is what a control like this avoids.
+
+## Setting up an environment
+
+The tables are created by a tool rather than clicked together in the maker
+portal. A schema that exists only as a sequence of clicks cannot be reviewed,
+repeated on a second environment, or rebuilt after someone deletes a column.
+
+```bash
+cd src/DynamicsCrmLab.Provisioning
+dotnet user-secrets set "Dataverse:Url" "https://your-org.crm4.dynamics.com"
+
+dotnet run              # publisher, solution, tables, columns, relationships, keys
+dotnet run -- --seed    # and a couple of customers, units and technicians
+```
+
+Every step checks before it writes, so running it again does nothing.
+
+What it creates:
+
+| Table | Columns |
+|---|---|
+| `dcl_equipment` | serial number, customer lookup |
+| `dcl_technician` | name, available |
+| `dcl_workorder` | number, stage, resolution, total price, three lookups, alternate key on the number |
+| `dcl_workorderline` | description, quantity, unit price, work order lookup |
+
+The stage values are stated rather than left to the publisher option value
+prefix, because they have to match the domain enum.
+
+What still has to be done in the portal, because there is no sane way to do it
+from code: business rules, the business process flow, security roles and the
+model-driven app.
 
 ## Getting the solution in and out of Dataverse
 
