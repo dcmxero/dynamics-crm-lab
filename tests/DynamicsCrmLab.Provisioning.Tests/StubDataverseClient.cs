@@ -35,6 +35,9 @@ internal sealed class StubDataverseClient(EntityCollection result) : IDataverseC
         CancellationToken cancellationToken = default) =>
         throw new NotSupportedException();
 
+    public Task DeleteAsync(string entityName, Guid id, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException();
+
     public Task UpdateAsync(Entity record, CancellationToken cancellationToken = default) =>
         throw new NotSupportedException();
 }

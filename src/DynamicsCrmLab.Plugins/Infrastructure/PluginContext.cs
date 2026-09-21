@@ -45,6 +45,24 @@ public sealed class PluginContext(
         Execution.InputParameters.TryGetValue("Target", out var target) ? target as Entity : null;
 
     /// <summary>
+    /// Gets a reference to the record the operation concerns, however the
+    /// message carries it.
+    /// </summary>
+    /// <remarks>
+    /// Create and Update put the record itself in Target; Delete puts only a
+    /// reference to it. A step registered on all three has to read both.
+    /// </remarks>
+    public EntityReference? TargetReference =>
+        Execution.InputParameters.TryGetValue("Target", out var target)
+            ? target switch
+            {
+                Entity entity => entity.ToEntityReference(),
+                EntityReference reference => reference,
+                _ => null
+            }
+            : null;
+
+    /// <summary>
     /// Gets a value indicating whether this run was triggered by another plug-in.
     /// </summary>
     /// <remarks>

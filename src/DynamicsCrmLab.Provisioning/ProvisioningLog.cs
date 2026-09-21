@@ -93,6 +93,12 @@ internal static partial class ProvisioningLog
         Message = "Registered step {Step} at {Stage}, {Mode}.")]
     public static partial void StepRegistered(ILogger logger, string step, PipelineStage stage, ExecutionMode mode);
 
+    [LoggerMessage(
+        EventId = 2022,
+        Level = LogLevel.Information,
+        Message = "Removed step {Step}, which the code no longer declares.")]
+    public static partial void StepRemoved(ILogger logger, string step);
+
     [LoggerMessage(EventId = 2020, Level = LogLevel.Information, Message = "Pre image on {Step} is already there.")]
     public static partial void ImageExists(ILogger logger, string step);
 

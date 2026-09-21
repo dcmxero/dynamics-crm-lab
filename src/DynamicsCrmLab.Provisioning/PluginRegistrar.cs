@@ -38,18 +38,28 @@ internal sealed class PluginRegistrar(IDataverseClient client, ILogger<PluginReg
 
     private static readonly PluginStep[] Steps =
     [
+        // A create has nothing to take an image of, and the line it creates
+        // carries the job it belongs to anyway.
         new(
             $"{AssemblyName}.WorkOrders.WorkOrderPricingPlugin",
             "Create",
-            WorkOrderSchema.EntityName,
-            PipelineStage.PreOperation,
+            WorkOrderLineSchema.EntityName,
+            PipelineStage.PostOperation,
             ExecutionMode.Synchronous),
         new(
             $"{AssemblyName}.WorkOrders.WorkOrderPricingPlugin",
             "Update",
-            WorkOrderSchema.EntityName,
-            PipelineStage.PreOperation,
-            ExecutionMode.Synchronous),
+            WorkOrderLineSchema.EntityName,
+            PipelineStage.PostOperation,
+            ExecutionMode.Synchronous,
+            PreImageAttributes: [WorkOrderLineSchema.WorkOrder]),
+        new(
+            $"{AssemblyName}.WorkOrders.WorkOrderPricingPlugin",
+            "Delete",
+            WorkOrderLineSchema.EntityName,
+            PipelineStage.PostOperation,
+            ExecutionMode.Synchronous,
+            PreImageAttributes: [WorkOrderLineSchema.WorkOrder]),
         new(
             $"{AssemblyName}.WorkOrders.WorkOrderClosedNotificationPlugin",
             "Update",
@@ -81,13 +91,62 @@ internal sealed class PluginRegistrar(IDataverseClient client, ILogger<PluginReg
 
         await EnsurePackageAsync(packagePath, cancellationToken).ConfigureAwait(false);
 
-        foreach (var step in Steps)
+        foreach (var typeName in Steps.Select(step => step.TypeName).Distinct(StringComparer.Ordinal))
         {
             // Importing the package is what creates the plug-in types; they are
             // read back rather than written.
-            var typeId = await TypeIdAsync(step.TypeName, cancellationToken).ConfigureAwait(false);
+            var typeId = await TypeIdAsync(typeName, cancellationToken).ConfigureAwait(false);
 
-            await EnsureStepAsync(typeId, step, cancellationToken).ConfigureAwait(false);
+            foreach (var step in Steps.Where(step => step.TypeName == typeName))
+            {
+                await EnsureStepAsync(typeId, step, cancellationToken).ConfigureAwait(false);
+            }
+
+            await RemoveUndeclaredStepsAsync(typeId, typeName, cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>
+    /// Removes steps of a plug-in that the code no longer declares.
+    /// </summary>
+    /// <remarks>
+    /// Without this a step that has been moved to another message or table
+    /// stays behind and keeps running, which is the failure the registration
+    /// tool makes easy: nobody remembers what is registered.
+    /// </remarks>
+    private async Task RemoveUndeclaredStepsAsync(
+        Guid typeId,
+        string typeName,
+        CancellationToken cancellationToken)
+    {
+        var declared = Steps
+            .Where(step => step.TypeName == typeName)
+            .Select(step => step.Name)
+            .ToHashSet(StringComparer.Ordinal);
+
+        var query = new QueryExpression("sdkmessageprocessingstep")
+        {
+            ColumnSet = new ColumnSet("name"),
+            Criteria = new FilterExpression
+            {
+                Conditions = { new ConditionExpression("eventhandler", ConditionOperator.Equal, typeId) }
+            }
+        };
+
+        var registered = await client.RetrieveMultipleAsync(query, cancellationToken).ConfigureAwait(false);
+
+        foreach (var step in registered.Entities)
+        {
+            var name = step.GetAttributeValue<string>("name") ?? string.Empty;
+
+            if (declared.Contains(name))
+            {
+                continue;
+            }
+
+            await client.DeleteAsync("sdkmessageprocessingstep", step.Id, cancellationToken).ConfigureAwait(false);
+
+            ProvisioningLog.StepRemoved(logger, name);
         }
     }
 

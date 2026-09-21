@@ -56,6 +56,15 @@ public interface IDataverseClient
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Removes a row.
+    /// </summary>
+    /// <param name="entityName">The logical name of the table.</param>
+    /// <param name="id">The identifier of the row.</param>
+    /// <param name="cancellationToken">Cancels the operation.</param>
+    /// <returns>A task that completes once the row has been removed.</returns>
+    Task DeleteAsync(string entityName, Guid id, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Writes changed columns back to a row.
     /// </summary>
     /// <param name="record">The row carrying the columns to write.</param>

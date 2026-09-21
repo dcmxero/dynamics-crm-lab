@@ -58,6 +58,10 @@ public sealed class DataverseClient(IOptions<DataverseOptions> options) : IDatav
         _client.Value.ExecuteAsync(request, cancellationToken);
 
     /// <inheritdoc/>
+    public Task DeleteAsync(string entityName, Guid id, CancellationToken cancellationToken = default) =>
+        _client.Value.DeleteAsync(entityName, id, cancellationToken);
+
+    /// <inheritdoc/>
     public Task UpdateAsync(Entity record, CancellationToken cancellationToken = default) =>
         _client.Value.UpdateAsync(record, cancellationToken);
 

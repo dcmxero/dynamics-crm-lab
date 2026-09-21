@@ -15,6 +15,8 @@ internal sealed class FakeDataverseClient : IDataverseClient
 
     public List<Entity> Updated { get; } = [];
 
+    public List<(string EntityName, Guid Id)> Deleted { get; } = [];
+
     public List<QueryExpression> Queries { get; } = [];
 
     public ColumnSet? RetrievedColumns { get; private set; }
@@ -83,6 +85,13 @@ internal sealed class FakeDataverseClient : IDataverseClient
         OrganizationRequest request,
         CancellationToken cancellationToken = default) =>
         Task.FromResult(new OrganizationResponse());
+
+    public Task DeleteAsync(string entityName, Guid id, CancellationToken cancellationToken = default)
+    {
+        Deleted.Add((entityName, id));
+
+        return Task.CompletedTask;
+    }
 
     public Task UpdateAsync(Entity record, CancellationToken cancellationToken = default)
     {
