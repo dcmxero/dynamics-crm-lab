@@ -64,6 +64,42 @@ internal sealed class PluginRegistrar(IDataverseClient client, ILogger<PluginReg
             PipelineStage.PostOperation,
             ExecutionMode.Synchronous,
             PreImageAttributes: [WorkOrderLineSchema.WorkOrder]),
+        // The rules the aggregate holds, enforced where the data lives rather
+        // than only where the application runs.
+        new(
+            $"{AssemblyName}.WorkOrders.WorkOrderLifecyclePlugin",
+            "Update",
+            WorkOrderSchema.EntityName,
+            PipelineStage.PreOperation,
+            ExecutionMode.Synchronous,
+            FilteringAttributes: [WorkOrderSchema.Status],
+            PreImageAttributes:
+            [
+                WorkOrderSchema.Status,
+                WorkOrderSchema.Number,
+                WorkOrderSchema.Technician,
+                WorkOrderSchema.Resolution
+            ]),
+        new(
+            $"{AssemblyName}.WorkOrders.ClosedWorkOrderLinesPlugin",
+            "Create",
+            WorkOrderLineSchema.EntityName,
+            PipelineStage.PreOperation,
+            ExecutionMode.Synchronous),
+        new(
+            $"{AssemblyName}.WorkOrders.ClosedWorkOrderLinesPlugin",
+            "Update",
+            WorkOrderLineSchema.EntityName,
+            PipelineStage.PreOperation,
+            ExecutionMode.Synchronous,
+            PreImageAttributes: [WorkOrderLineSchema.WorkOrder]),
+        new(
+            $"{AssemblyName}.WorkOrders.ClosedWorkOrderLinesPlugin",
+            "Delete",
+            WorkOrderLineSchema.EntityName,
+            PipelineStage.PreOperation,
+            ExecutionMode.Synchronous,
+            PreImageAttributes: [WorkOrderLineSchema.WorkOrder]),
         new(
             $"{AssemblyName}.WorkOrders.WorkOrderClosedNotificationPlugin",
             "Update",

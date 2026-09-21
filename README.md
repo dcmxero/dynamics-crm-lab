@@ -67,8 +67,17 @@ application rather than a second copy that would drift.
 
 | Plug-in | Registration |
 |---|---|
+| `WorkOrderLifecyclePlugin` | Update of `dcl_workorder`, filtering attribute `dcl_status`, PreOperation, synchronous, pre image of the stage, technician and resolution |
+| `ClosedWorkOrderLinesPlugin` | Create, Update and Delete of `dcl_workorderline`, PreOperation, synchronous, pre image `dcl_workorderid` |
 | `WorkOrderPricingPlugin` | Create, Update and Delete of `dcl_workorderline`, PostOperation, synchronous, pre image `dcl_workorderid` |
 | `WorkOrderClosedNotificationPlugin` | Update of `dcl_workorder`, filtering attribute `dcl_status`, PostOperation, **asynchronous**, pre image `dcl_status` and `dcl_number` |
+
+The lifecycle rules run where the data lives, not only where the application
+does. A bulk edit, a flow, or somebody in the maker portal writing straight to
+the table would otherwise be able to close a job nobody started or reopen one
+that is finished. The plug-in does not restate the rules: it rebuilds the stage
+the job came from into the aggregate and asks the aggregate to make the move, so
+the platform gives the same answer the API gives.
 
 Pricing is triggered by the line rather than by the job: a job is saved before
 its lines exist, so a step on the job would add up an empty list. The
