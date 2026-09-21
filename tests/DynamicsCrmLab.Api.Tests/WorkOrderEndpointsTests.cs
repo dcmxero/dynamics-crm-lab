@@ -151,6 +151,19 @@ public sealed class WorkOrderEndpointsTests(WorkOrderApiFactoryFixture fixture)
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
+    [Fact]
+    public async Task Assign_ReturnsUnprocessableEntityWhenTheTechnicianIsBusy()
+    {
+        var workOrder = StoredWorkOrder();
+        var busy = _factory.Store.AddTechnician(isAvailable: false);
+
+        var response = await _client.PostAsJsonAsync(
+            $"/api/work-orders/{workOrder.Id}/assignment",
+            new { technicianId = busy.Id });
+
+        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+    }
+
     private WorkOrder StoredWorkOrder()
     {
         var customer = _factory.Store.AddCustomer();
