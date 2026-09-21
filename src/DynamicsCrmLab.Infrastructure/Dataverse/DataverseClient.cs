@@ -1,3 +1,4 @@
+using System.ServiceModel;
 using Microsoft.Extensions.Options;
 using Microsoft.PowerPlatform.Dataverse.Client;
 using Microsoft.Xrm.Sdk;
@@ -24,12 +25,25 @@ public sealed class DataverseClient(IOptions<DataverseOptions> options) : IDatav
         _client.Value.CreateAsync(record, cancellationToken);
 
     /// <inheritdoc/>
-    public Task<Entity> RetrieveAsync(
+    public async Task<Entity?> RetrieveAsync(
         string entityName,
         Guid id,
         ColumnSet columns,
-        CancellationToken cancellationToken = default) =>
-        _client.Value.RetrieveAsync(entityName, id, columns, cancellationToken);
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            return await _client.Value
+                .RetrieveAsync(entityName, id, columns, cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch (FaultException<OrganizationServiceFault> fault) when (DataverseFault.IsRecordNotFound(fault))
+        {
+            // Asking for a row that is not there is an ordinary answer to an
+            // ordinary question, so callers get nothing rather than a fault.
+            return null;
+        }
+    }
 
     /// <inheritdoc/>
     public Task<EntityCollection> RetrieveMultipleAsync(

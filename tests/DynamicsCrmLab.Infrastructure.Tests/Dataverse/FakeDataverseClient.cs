@@ -38,14 +38,14 @@ internal sealed class FakeDataverseClient : IDataverseClient
         return Task.FromResult(record.Id == Guid.Empty ? Guid.NewGuid() : record.Id);
     }
 
-    public Task<Entity> RetrieveAsync(
+    public Task<Entity?> RetrieveAsync(
         string entityName,
         Guid id,
         ColumnSet columns,
         CancellationToken cancellationToken = default)
     {
         RetrievedColumns = columns;
-        return Task.FromResult(RetrieveResult ?? new Entity(entityName, id));
+        return Task.FromResult<Entity?>(RetrieveResult ?? new Entity(entityName, id));
     }
 
     public Task<EntityCollection> RetrieveMultipleAsync(

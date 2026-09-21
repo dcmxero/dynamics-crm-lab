@@ -37,8 +37,8 @@ internal sealed class WhoAmICommand(IDataverseClient client) : ICliCommand
                 cancellationToken)
             .ConfigureAwait(false);
 
-        await Console.Out.WriteLineAsync($"  user          {user.GetAttributeValue<string>("fullname")}").ConfigureAwait(false);
-        await Console.Out.WriteLineAsync($"  email         {user.GetAttributeValue<string>("internalemailaddress")}").ConfigureAwait(false);
+        await Console.Out.WriteLineAsync($"  user          {user?.GetAttributeValue<string>("fullname")}").ConfigureAwait(false);
+        await Console.Out.WriteLineAsync($"  email         {user?.GetAttributeValue<string>("internalemailaddress")}").ConfigureAwait(false);
         await Console.Out.WriteLineAsync($"  user id       {response.UserId}").ConfigureAwait(false);
         await Console.Out.WriteLineAsync($"  business unit {response.BusinessUnitId}").ConfigureAwait(false);
         await Console.Out.WriteLineAsync($"  organization  {response.OrganizationId}").ConfigureAwait(false);

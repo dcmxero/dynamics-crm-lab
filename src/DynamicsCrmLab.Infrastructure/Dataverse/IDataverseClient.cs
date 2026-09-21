@@ -28,8 +28,8 @@ public interface IDataverseClient
     /// <param name="id">The identifier of the row.</param>
     /// <param name="columns">The columns to return.</param>
     /// <param name="cancellationToken">Cancels the operation.</param>
-    /// <returns>The row.</returns>
-    Task<Entity> RetrieveAsync(
+    /// <returns>The row, or <see langword="null"/> when nothing is stored under that identifier.</returns>
+    Task<Entity?> RetrieveAsync(
         string entityName,
         Guid id,
         ColumnSet columns,

@@ -23,7 +23,7 @@ internal sealed class StubDataverseClient(EntityCollection result) : IDataverseC
     public Task<Guid> CreateAsync(Entity record, CancellationToken cancellationToken = default) =>
         throw new NotSupportedException();
 
-    public Task<Entity> RetrieveAsync(
+    public Task<Entity?> RetrieveAsync(
         string entityName,
         Guid id,
         ColumnSet columns,
