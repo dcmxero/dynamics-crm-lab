@@ -60,6 +60,10 @@ public static class ServiceCollectionExtensions
         // The connection is expensive to open and safe to share, so it is opened once.
         services.AddSingleton<IDataverseClient, DataverseClient>();
 
+        // The currencies of an environment change when the environment is set
+        // up, so what is read stays read.
+        services.AddSingleton<DataverseCurrencies>();
+
         services.AddScoped<IWorkOrderRepository, DataverseWorkOrderRepository>();
         services.AddScoped<ICustomerRepository, DataverseCustomerRepository>();
         services.AddScoped<IEquipmentRepository, DataverseEquipmentRepository>();

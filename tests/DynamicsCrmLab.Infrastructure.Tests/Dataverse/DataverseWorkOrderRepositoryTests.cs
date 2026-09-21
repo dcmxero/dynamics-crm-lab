@@ -1,4 +1,5 @@
 using DynamicsCrmLab.Domain.WorkOrders;
+using DynamicsCrmLab.Infrastructure.Dataverse;
 using DynamicsCrmLab.Infrastructure.Dataverse.Repositories;
 using DynamicsCrmLab.Schema;
 using FluentAssertions;
@@ -13,7 +14,32 @@ public sealed class DataverseWorkOrderRepositoryTests
     private readonly FakeDataverseClient _client = new();
     private readonly DataverseWorkOrderRepository _repository;
 
-    public DataverseWorkOrderRepositoryTests() => _repository = new DataverseWorkOrderRepository(_client);
+    public DataverseWorkOrderRepositoryTests()
+    {
+        // A read of a currency answers with the one the environment reports,
+        // whatever else the test has the client returning.
+        var currency = new Entity(CurrencySchema.EntityName, Guid.NewGuid())
+        {
+            [CurrencySchema.IsoCode] = "EUR"
+        };
+
+        _client.RetrieveResults[CurrencySchema.EntityName] = currency;
+        _client.EnqueuePage(OrganizationSchema.EntityName, OrganizationPage(currency.Id));
+
+        _repository = new DataverseWorkOrderRepository(_client, new DataverseCurrencies(_client));
+    }
+
+    private static EntityCollection OrganizationPage(Guid currencyId)
+    {
+        var page = new EntityCollection();
+
+        page.Entities.Add(new Entity(OrganizationSchema.EntityName, Guid.NewGuid())
+        {
+            [OrganizationSchema.BaseCurrency] = new EntityReference(CurrencySchema.EntityName, currencyId)
+        });
+
+        return page;
+    }
 
     [Fact]
     public async Task AddAsync_WritesTheWorkOrderAndEachOfItsLines()
@@ -74,8 +100,10 @@ public sealed class DataverseWorkOrderRepositoryTests
     {
         await _repository.GetByIdAsync(Guid.NewGuid());
 
-        _client.RetrievedColumns!.AllColumns.Should().BeFalse();
-        _client.RetrievedColumns.Columns.Should().BeEquivalentTo(WorkOrderSchema.ReadColumns);
+        var asked = _client.RetrievedColumnsByEntity[WorkOrderSchema.EntityName];
+
+        asked.AllColumns.Should().BeFalse();
+        asked.Columns.Should().BeEquivalentTo(WorkOrderSchema.ReadColumns);
     }
 
     [Fact]
@@ -136,6 +164,42 @@ public sealed class DataverseWorkOrderRepositoryTests
         var found = await _repository.ListByStatusAsync(WorkOrderStatus.New, maxCount: 10);
 
         found.Should().OnlyContain(workOrder => workOrder.Lines.Count == 0);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_ReportsTheCurrencyTheRowsAreHeldInRatherThanAnAssumedOne()
+    {
+        var client = new FakeDataverseClient();
+        var currencyId = Guid.NewGuid();
+
+        client.RetrieveResults[CurrencySchema.EntityName] = new Entity(CurrencySchema.EntityName, currencyId)
+        {
+            [CurrencySchema.IsoCode] = "CZK"
+        };
+
+        var workOrderId = Guid.NewGuid();
+        client.RetrieveResults[WorkOrderSchema.EntityName] = new Entity(WorkOrderSchema.EntityName, workOrderId)
+        {
+            [WorkOrderSchema.Number] = "WO-20260901-ABCDEF",
+            [WorkOrderSchema.Status] = new OptionSetValue((int)WorkOrderStatus.New),
+            [WorkOrderSchema.Currency] = new EntityReference(CurrencySchema.EntityName, currencyId)
+        };
+
+        var lines = new EntityCollection();
+        lines.Entities.Add(new Entity(WorkOrderLineSchema.EntityName, Guid.NewGuid())
+        {
+            [WorkOrderLineSchema.WorkOrder] = new EntityReference(WorkOrderSchema.EntityName, workOrderId),
+            [WorkOrderLineSchema.Description] = "Technician labour",
+            [WorkOrderLineSchema.Quantity] = 1,
+            [WorkOrderLineSchema.UnitPrice] = new Money(45m)
+        });
+        client.EnqueuePage(WorkOrderLineSchema.EntityName, lines);
+
+        var repository = new DataverseWorkOrderRepository(client, new DataverseCurrencies(client));
+
+        var workOrder = await repository.GetByIdAsync(workOrderId);
+
+        workOrder!.TotalPrice.Currency.Should().Be("CZK");
     }
 
     private static EntityCollection PageOf(int rows, bool moreRecords)

@@ -34,6 +34,9 @@ public static class WorkOrderSchema
     /// <summary>The account of the work carried out.</summary>
     public const string Resolution = "dcl_resolution";
 
+    /// <summary>The currency the total is held in.</summary>
+    public const string Currency = "transactioncurrencyid";
+
     /// <summary>The amount to invoice, written by the pricing plug-in.</summary>
     public const string TotalPrice = "dcl_totalprice";
 
@@ -41,7 +44,7 @@ public static class WorkOrderSchema
     /// Gets the columns needed to rebuild the aggregate.
     /// </summary>
     public static IReadOnlyList<string> ReadColumns { get; } =
-        [Id, Number, Customer, Equipment, Technician, Status, Resolution];
+        [Id, Number, Customer, Equipment, Technician, Status, Resolution, Currency];
 }
 
 /// <summary>
@@ -67,9 +70,12 @@ public static class WorkOrderLineSchema
     /// <summary>The price of a single hour or unit.</summary>
     public const string UnitPrice = "dcl_unitprice";
 
+    /// <summary>The currency the price is held in.</summary>
+    public const string Currency = "transactioncurrencyid";
+
     /// <summary>
     /// Gets the columns needed to rebuild a line.
     /// </summary>
     public static IReadOnlyList<string> ReadColumns { get; } =
-        [Id, WorkOrder, Description, Quantity, UnitPrice];
+        [Id, WorkOrder, Description, Quantity, UnitPrice, Currency];
 }

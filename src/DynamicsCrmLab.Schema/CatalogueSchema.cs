@@ -69,3 +69,27 @@ public static class TechnicianSchema
     /// </summary>
     public static IReadOnlyList<string> ReadColumns { get; } = [Id, FullName, IsAvailable];
 }
+
+/// <summary>
+/// Names the parts of the organization row this solution reads.
+/// </summary>
+public static class OrganizationSchema
+{
+    /// <summary>The logical name of the table.</summary>
+    public const string EntityName = "organization";
+
+    /// <summary>The currency the environment was created with.</summary>
+    public const string BaseCurrency = "basecurrencyid";
+}
+
+/// <summary>
+/// Names the parts of a currency this solution reads.
+/// </summary>
+public static class CurrencySchema
+{
+    /// <summary>The logical name of the table.</summary>
+    public const string EntityName = "transactioncurrency";
+
+    /// <summary>The ISO code, such as EUR.</summary>
+    public const string IsoCode = "isocurrencycode";
+}

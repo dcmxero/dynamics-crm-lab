@@ -14,7 +14,9 @@ namespace DynamicsCrmLab.Infrastructure.Dataverse.Repositories;
 /// The only type in the solution that knows work orders live in Dataverse.
 /// </remarks>
 /// <param name="client">The connection rows are read from and written to.</param>
-public sealed class DataverseWorkOrderRepository(IDataverseClient client) : IWorkOrderRepository
+/// <param name="currencies">The currencies the environment keeps money in.</param>
+public sealed class DataverseWorkOrderRepository(IDataverseClient client, DataverseCurrencies currencies)
+    : IWorkOrderRepository
 {
     /// <summary>
     /// Dataverse returns at most this many rows in one response, whatever the
@@ -27,14 +29,16 @@ public sealed class DataverseWorkOrderRepository(IDataverseClient client) : IWor
     {
         ArgumentNullException.ThrowIfNull(workOrder);
 
+        var (currencyId, _) = await currencies.BaseAsync(cancellationToken).ConfigureAwait(false);
+
         var id = await client
-            .CreateAsync(WorkOrderMapper.ToRecord(workOrder), cancellationToken)
+            .CreateAsync(WorkOrderMapper.ToRecord(workOrder, currencyId), cancellationToken)
             .ConfigureAwait(false);
 
         foreach (var line in workOrder.Lines)
         {
             await client
-                .CreateAsync(WorkOrderMapper.ToLineRecord(line, id), cancellationToken)
+                .CreateAsync(WorkOrderMapper.ToLineRecord(line, id, currencyId), cancellationToken)
                 .ConfigureAwait(false);
         }
 
@@ -58,8 +62,9 @@ public sealed class DataverseWorkOrderRepository(IDataverseClient client) : IWor
         }
 
         var lines = await ReadLinesAsync(id, cancellationToken).ConfigureAwait(false);
+        var currency = await CurrencyOfAsync(record, cancellationToken).ConfigureAwait(false);
 
-        return WorkOrderMapper.ToDomain(record, lines);
+        return WorkOrderMapper.ToDomain(record, lines, currency);
     }
 
     /// <inheritdoc/>
@@ -116,12 +121,39 @@ public sealed class DataverseWorkOrderRepository(IDataverseClient client) : IWor
             wanted.Select(record => record.Id).ToList(),
             cancellationToken).ConfigureAwait(false);
 
-        return
-        [
-            .. wanted.Select(record => WorkOrderMapper.ToDomain(
+        var restored = new List<WorkOrder>(wanted.Count);
+
+        foreach (var record in wanted)
+        {
+            var currency = await CurrencyOfAsync(record, cancellationToken).ConfigureAwait(false);
+
+            restored.Add(WorkOrderMapper.ToDomain(
                 record,
-                linesByWorkOrder.TryGetValue(record.Id, out var lines) ? lines : []))
-        ];
+                linesByWorkOrder.TryGetValue(record.Id, out var lines) ? lines : [],
+                currency));
+        }
+
+        return restored;
+    }
+
+    /// <summary>
+    /// Reads the currency a job holds its money in.
+    /// </summary>
+    /// <remarks>
+    /// A row written before the currency was stated carries none, and the
+    /// platform treats such an amount as being in the base currency, so that is
+    /// what it is reported as.
+    /// </remarks>
+    private async Task<string> CurrencyOfAsync(Entity record, CancellationToken cancellationToken)
+    {
+        if (record.GetAttributeValue<EntityReference>(WorkOrderSchema.Currency) is { } currency)
+        {
+            return await currencies.CodeOfAsync(currency.Id, cancellationToken).ConfigureAwait(false);
+        }
+
+        var (_, code) = await currencies.BaseAsync(cancellationToken).ConfigureAwait(false);
+
+        return code;
     }
 
     private async Task<IReadOnlyList<Entity>> ReadLinesAsync(Guid workOrderId, CancellationToken cancellationToken)

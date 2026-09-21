@@ -21,7 +21,17 @@ internal sealed class FakeDataverseClient : IDataverseClient
 
     public ColumnSet? RetrievedColumns { get; private set; }
 
+    /// <summary>
+    /// The columns asked for per table, for a test that reads more than one.
+    /// </summary>
+    public Dictionary<string, ColumnSet> RetrievedColumnsByEntity { get; } = new(StringComparer.Ordinal);
+
     public Entity? RetrieveResult { get; set; }
+
+    /// <summary>
+    /// The row to answer with per table, for a test that reads more than one.
+    /// </summary>
+    public Dictionary<string, Entity> RetrieveResults { get; } = new(StringComparer.Ordinal);
 
     public void EnqueuePage(string entityName, EntityCollection page)
     {
@@ -47,6 +57,13 @@ internal sealed class FakeDataverseClient : IDataverseClient
         CancellationToken cancellationToken = default)
     {
         RetrievedColumns = columns;
+        RetrievedColumnsByEntity[entityName] = columns;
+
+        if (RetrieveResults.TryGetValue(entityName, out var byEntity))
+        {
+            return Task.FromResult<Entity?>(byEntity);
+        }
+
         return Task.FromResult<Entity?>(RetrieveResult ?? new Entity(entityName, id));
     }
 

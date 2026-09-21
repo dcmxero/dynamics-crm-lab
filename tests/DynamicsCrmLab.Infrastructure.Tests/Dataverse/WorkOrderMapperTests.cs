@@ -37,7 +37,7 @@ public sealed class WorkOrderMapperTests
             [WorkOrderLineSchema.UnitPrice] = new XrmMoney(45m)
         };
 
-        var workOrder = WorkOrderMapper.ToDomain(record, [lineRecord]);
+        var workOrder = WorkOrderMapper.ToDomain(record, [lineRecord], "EUR");
 
         workOrder.Id.Should().Be(workOrderId);
         workOrder.Number.Should().Be("WO-20260901-ABCDEF");
@@ -56,7 +56,7 @@ public sealed class WorkOrderMapperTests
             [WorkOrderSchema.Status] = new OptionSetValue((int)WorkOrderStatus.New)
         };
 
-        var workOrder = WorkOrderMapper.ToDomain(record, []);
+        var workOrder = WorkOrderMapper.ToDomain(record, [], "EUR");
 
         workOrder.TechnicianId.Should().BeNull();
         workOrder.Lines.Should().BeEmpty();
@@ -80,7 +80,7 @@ public sealed class WorkOrderMapperTests
     {
         var workOrder = WorkOrder.Create(CustomerId, EquipmentId);
 
-        var record = WorkOrderMapper.ToRecord(workOrder);
+        var record = WorkOrderMapper.ToRecord(workOrder, Guid.NewGuid());
 
         record.GetAttributeValue<EntityReference>(WorkOrderSchema.Customer).Id.Should().Be(CustomerId);
         record.GetAttributeValue<EntityReference>(WorkOrderSchema.Equipment).Id.Should().Be(EquipmentId);
@@ -94,7 +94,7 @@ public sealed class WorkOrderMapperTests
         var workOrder = ClosedWorkOrder();
         var line = workOrder.Lines[0];
 
-        var record = WorkOrderMapper.ToLineRecord(line, workOrder.Id);
+        var record = WorkOrderMapper.ToLineRecord(line, workOrder.Id, Guid.NewGuid());
 
         record.GetAttributeValue<EntityReference>(WorkOrderLineSchema.WorkOrder).Id.Should().Be(workOrder.Id);
         record.GetAttributeValue<XrmMoney>(WorkOrderLineSchema.UnitPrice).Value.Should().Be(45m);
