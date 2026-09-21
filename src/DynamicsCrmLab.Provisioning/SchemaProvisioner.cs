@@ -4,7 +4,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Messages;
 using Microsoft.Xrm.Sdk.Metadata;
-using static DynamicsCrmLab.Provisioning.MetadataFactory;
 
 namespace DynamicsCrmLab.Provisioning;
 
@@ -19,8 +18,12 @@ namespace DynamicsCrmLab.Provisioning;
 /// Every step checks first, so running this twice does nothing the second time.
 /// </remarks>
 /// <param name="client">The Dataverse connection.</param>
+/// <param name="language">Reads the language the environment accepts labels in.</param>
 /// <param name="logger">Reports what was created and what was already there.</param>
-internal sealed class SchemaProvisioner(IDataverseClient client, ILogger<SchemaProvisioner> logger)
+internal sealed class SchemaProvisioner(
+    IDataverseClient client,
+    OrganizationLanguage language,
+    ILogger<SchemaProvisioner> logger)
 {
     private static readonly (int Value, string Label)[] WorkOrderStages =
     [
@@ -37,20 +40,27 @@ internal sealed class SchemaProvisioner(IDataverseClient client, ILogger<SchemaP
     /// <returns>A task that completes once everything is in place.</returns>
     public async Task ApplyAsync(CancellationToken cancellationToken = default)
     {
-        await EnsureEquipmentAsync(cancellationToken).ConfigureAwait(false);
-        await EnsureTechnicianAsync(cancellationToken).ConfigureAwait(false);
-        await EnsureWorkOrderAsync(cancellationToken).ConfigureAwait(false);
-        await EnsureWorkOrderLineAsync(cancellationToken).ConfigureAwait(false);
-        await EnsureRelationshipsAsync(cancellationToken).ConfigureAwait(false);
-        await EnsureAlternateKeyAsync(cancellationToken).ConfigureAwait(false);
+        var metadata = new MetadataFactory(
+            await language.BaseCodeAsync(cancellationToken).ConfigureAwait(false));
+
+        await EnsureEquipmentAsync(metadata, cancellationToken).ConfigureAwait(false);
+        await EnsureTechnicianAsync(metadata, cancellationToken).ConfigureAwait(false);
+        await EnsureWorkOrderAsync(metadata, cancellationToken).ConfigureAwait(false);
+        await EnsureWorkOrderLineAsync(metadata, cancellationToken).ConfigureAwait(false);
+        await EnsureRelationshipsAsync(metadata, cancellationToken).ConfigureAwait(false);
+        await EnsureAlternateKeyAsync(metadata, cancellationToken).ConfigureAwait(false);
     }
 
-    private async Task EnsureEquipmentAsync(CancellationToken cancellationToken)
+    private async Task EnsureEquipmentAsync(MetadataFactory metadata, CancellationToken cancellationToken)
     {
         await EnsureTableAsync(
             EquipmentSchema.EntityName,
-            Table("dcl_Equipment", "Equipment", "Equipment", "A serviceable unit installed at a customer site."),
-            Text(
+            metadata.Table(
+                "dcl_Equipment",
+                "Equipment",
+                "Equipment",
+                "A serviceable unit installed at a customer site."),
+            metadata.Text(
                 "dcl_SerialNumber",
                 "Serial number",
                 "The manufacturer serial number identifying the unit.",
@@ -59,17 +69,21 @@ internal sealed class SchemaProvisioner(IDataverseClient client, ILogger<SchemaP
             cancellationToken).ConfigureAwait(false);
     }
 
-    private async Task EnsureTechnicianAsync(CancellationToken cancellationToken)
+    private async Task EnsureTechnicianAsync(MetadataFactory metadata, CancellationToken cancellationToken)
     {
         await EnsureTableAsync(
             TechnicianSchema.EntityName,
-            Table("dcl_Technician", "Technician", "Technicians", "A field technician a work order can be assigned to."),
-            Text("dcl_Name", "Name", "The name shown on the schedule.", maxLength: 100, required: true),
+            metadata.Table(
+                "dcl_Technician",
+                "Technician",
+                "Technicians",
+                "A field technician a work order can be assigned to."),
+            metadata.Text("dcl_Name", "Name", "The name shown on the schedule.", maxLength: 100, required: true),
             cancellationToken).ConfigureAwait(false);
 
         await EnsureColumnAsync(
             TechnicianSchema.EntityName,
-            YesNo(
+            metadata.YesNo(
                 "dcl_IsAvailable",
                 "Available",
                 "Whether the technician can take on further work.",
@@ -77,12 +91,16 @@ internal sealed class SchemaProvisioner(IDataverseClient client, ILogger<SchemaP
             cancellationToken).ConfigureAwait(false);
     }
 
-    private async Task EnsureWorkOrderAsync(CancellationToken cancellationToken)
+    private async Task EnsureWorkOrderAsync(MetadataFactory metadata, CancellationToken cancellationToken)
     {
         await EnsureTableAsync(
             WorkOrderSchema.EntityName,
-            Table("dcl_WorkOrder", "Work order", "Work orders", "A service job raised against customer equipment."),
-            Text(
+            metadata.Table(
+                "dcl_WorkOrder",
+                "Work order",
+                "Work orders",
+                "A service job raised against customer equipment."),
+            metadata.Text(
                 "dcl_Number",
                 "Number",
                 "The reference quoted to the customer.",
@@ -90,29 +108,32 @@ internal sealed class SchemaProvisioner(IDataverseClient client, ILogger<SchemaP
                 required: true),
             cancellationToken).ConfigureAwait(false);
 
-        await EnsureStatusAsync(cancellationToken).ConfigureAwait(false);
+        await EnsureStatusAsync(metadata, cancellationToken).ConfigureAwait(false);
 
         await EnsureColumnAsync(
             WorkOrderSchema.EntityName,
-            Memo("dcl_Resolution", "Resolution", "The account of the work carried out."),
+            metadata.Memo("dcl_Resolution", "Resolution", "The account of the work carried out."),
             cancellationToken).ConfigureAwait(false);
 
         await EnsureColumnAsync(
             WorkOrderSchema.EntityName,
-            Currency("dcl_TotalPrice", "Total price", "The amount to invoice, written by the pricing plug-in."),
+            metadata.Currency(
+                "dcl_TotalPrice",
+                "Total price",
+                "The amount to invoice, written by the pricing plug-in."),
             cancellationToken).ConfigureAwait(false);
     }
 
-    private async Task EnsureWorkOrderLineAsync(CancellationToken cancellationToken)
+    private async Task EnsureWorkOrderLineAsync(MetadataFactory metadata, CancellationToken cancellationToken)
     {
         await EnsureTableAsync(
             WorkOrderLineSchema.EntityName,
-            Table(
+            metadata.Table(
                 "dcl_WorkOrderLine",
                 "Work order line",
                 "Work order lines",
                 "A single charge on a work order, either labour or material."),
-            Text(
+            metadata.Text(
                 "dcl_Description",
                 "Description",
                 "The work done or the part used.",
@@ -122,7 +143,7 @@ internal sealed class SchemaProvisioner(IDataverseClient client, ILogger<SchemaP
 
         await EnsureColumnAsync(
             WorkOrderLineSchema.EntityName,
-            Whole(
+            metadata.Whole(
                 "dcl_Quantity",
                 "Quantity",
                 "The number of hours or units charged.",
@@ -133,11 +154,11 @@ internal sealed class SchemaProvisioner(IDataverseClient client, ILogger<SchemaP
 
         await EnsureColumnAsync(
             WorkOrderLineSchema.EntityName,
-            Currency("dcl_UnitPrice", "Unit price", "The price of a single hour or unit."),
+            metadata.Currency("dcl_UnitPrice", "Unit price", "The price of a single hour or unit."),
             cancellationToken).ConfigureAwait(false);
     }
 
-    private async Task EnsureStatusAsync(CancellationToken cancellationToken)
+    private async Task EnsureStatusAsync(MetadataFactory metadata, CancellationToken cancellationToken)
     {
         if (await ColumnExistsAsync(WorkOrderSchema.EntityName, WorkOrderSchema.Status, cancellationToken)
             .ConfigureAwait(false))
@@ -147,21 +168,26 @@ internal sealed class SchemaProvisioner(IDataverseClient client, ILogger<SchemaP
             return;
         }
 
-        var status = Choice("dcl_Status", "Stage", "Where the job has reached in its lifecycle.", defaultValue: 1);
+        var status = metadata.Choice(
+            "dcl_Status",
+            "Stage",
+            "Where the job has reached in its lifecycle.",
+            defaultValue: 1);
 
         // The values must line up with the domain enum, so they are stated
         // rather than left to the publisher option value prefix.
         foreach (var (value, label) in WorkOrderStages)
         {
-            status.OptionSet.Options.Add(new OptionMetadata(Label(label), value));
+            status.OptionSet.Options.Add(new OptionMetadata(metadata.Label(label), value));
         }
 
         await EnsureColumnAsync(WorkOrderSchema.EntityName, status, cancellationToken).ConfigureAwait(false);
     }
 
-    private async Task EnsureRelationshipsAsync(CancellationToken cancellationToken)
+    private async Task EnsureRelationshipsAsync(MetadataFactory metadata, CancellationToken cancellationToken)
     {
         await EnsureLookupAsync(
+            metadata,
             "dcl_contact_equipment",
             ContactSchema.EntityName,
             EquipmentSchema.EntityName,
@@ -171,6 +197,7 @@ internal sealed class SchemaProvisioner(IDataverseClient client, ILogger<SchemaP
             cancellationToken).ConfigureAwait(false);
 
         await EnsureLookupAsync(
+            metadata,
             "dcl_contact_workorder",
             ContactSchema.EntityName,
             WorkOrderSchema.EntityName,
@@ -180,6 +207,7 @@ internal sealed class SchemaProvisioner(IDataverseClient client, ILogger<SchemaP
             cancellationToken).ConfigureAwait(false);
 
         await EnsureLookupAsync(
+            metadata,
             "dcl_equipment_workorder",
             EquipmentSchema.EntityName,
             WorkOrderSchema.EntityName,
@@ -189,6 +217,7 @@ internal sealed class SchemaProvisioner(IDataverseClient client, ILogger<SchemaP
             cancellationToken).ConfigureAwait(false);
 
         await EnsureLookupAsync(
+            metadata,
             "dcl_technician_workorder",
             TechnicianSchema.EntityName,
             WorkOrderSchema.EntityName,
@@ -198,6 +227,7 @@ internal sealed class SchemaProvisioner(IDataverseClient client, ILogger<SchemaP
             cancellationToken).ConfigureAwait(false);
 
         await EnsureLookupAsync(
+            metadata,
             "dcl_workorder_workorderline",
             WorkOrderSchema.EntityName,
             WorkOrderLineSchema.EntityName,
@@ -209,7 +239,7 @@ internal sealed class SchemaProvisioner(IDataverseClient client, ILogger<SchemaP
             cascadeDelete: CascadeType.Cascade).ConfigureAwait(false);
     }
 
-    private async Task EnsureAlternateKeyAsync(CancellationToken cancellationToken)
+    private async Task EnsureAlternateKeyAsync(MetadataFactory metadata, CancellationToken cancellationToken)
     {
         var table = await DescribeAsync(WorkOrderSchema.EntityName, cancellationToken).ConfigureAwait(false);
 
@@ -228,7 +258,7 @@ internal sealed class SchemaProvisioner(IDataverseClient client, ILogger<SchemaP
                 EntityKey = new EntityKeyMetadata
                 {
                     SchemaName = "dcl_WorkOrderNumber",
-                    DisplayName = Label("Work order number"),
+                    DisplayName = metadata.Label("Work order number"),
                     KeyAttributes = [WorkOrderSchema.Number]
                 }
             },
@@ -291,6 +321,7 @@ internal sealed class SchemaProvisioner(IDataverseClient client, ILogger<SchemaP
     }
 
     private async Task EnsureLookupAsync(
+        MetadataFactory metadata,
         string relationshipName,
         string oneSide,
         string manySide,
@@ -314,8 +345,8 @@ internal sealed class SchemaProvisioner(IDataverseClient client, ILogger<SchemaP
                 Lookup = new LookupAttributeMetadata
                 {
                     SchemaName = lookupSchemaName,
-                    DisplayName = Label(display),
-                    Description = Label(description)
+                    DisplayName = metadata.Label(display),
+                    Description = metadata.Label(description)
                 },
                 OneToManyRelationship = new OneToManyRelationshipMetadata
                 {
