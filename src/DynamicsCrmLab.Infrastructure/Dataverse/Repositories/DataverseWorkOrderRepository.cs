@@ -161,8 +161,13 @@ public sealed class DataverseWorkOrderRepository(IDataverseClient client) : IWor
 
         foreach (var record in page.Entities)
         {
-            var owner = record.GetAttributeValue<EntityReference>(WorkOrderLineSchema.WorkOrder)?.Id
-                        ?? workOrderIds[0];
+            // A line whose lookup came back empty belongs to no job here.
+            // Charging it to the first one in the page would put somebody
+            // else's money on an unrelated invoice.
+            if (record.GetAttributeValue<EntityReference>(WorkOrderLineSchema.WorkOrder)?.Id is not { } owner)
+            {
+                continue;
+            }
 
             if (!byWorkOrder.TryGetValue(owner, out var lines))
             {

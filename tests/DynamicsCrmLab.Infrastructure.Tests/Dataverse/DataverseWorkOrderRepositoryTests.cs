@@ -117,6 +117,27 @@ public sealed class DataverseWorkOrderRepositoryTests
             .Should().Be(1);
     }
 
+    [Fact]
+    public async Task ListByStatusAsync_LeavesALineThatBelongsToNoJobOffEveryJob()
+    {
+        var page = PageOf(rows: 2, moreRecords: false);
+        _client.EnqueuePage(WorkOrderSchema.EntityName, page);
+
+        var lines = new EntityCollection();
+        lines.Entities.Add(new Entity(WorkOrderLineSchema.EntityName, Guid.NewGuid())
+        {
+            // The lookup came back empty, so the charge belongs to nobody here.
+            [WorkOrderLineSchema.Description] = "Orphan",
+            [WorkOrderLineSchema.Quantity] = 1,
+            [WorkOrderLineSchema.UnitPrice] = new Money(500m)
+        });
+        _client.EnqueuePage(WorkOrderLineSchema.EntityName, lines);
+
+        var found = await _repository.ListByStatusAsync(WorkOrderStatus.New, maxCount: 10);
+
+        found.Should().OnlyContain(workOrder => workOrder.Lines.Count == 0);
+    }
+
     private static EntityCollection PageOf(int rows, bool moreRecords)
     {
         var page = new EntityCollection { MoreRecords = moreRecords, PagingCookie = "<cookie page=\"1\" />" };
