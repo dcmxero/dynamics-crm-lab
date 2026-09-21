@@ -53,5 +53,16 @@ public sealed class DataverseOptions
     /// Gets or sets where the sign-in token is cached so that interactive sign-in
     /// is not repeated on every run.
     /// </summary>
-    public string TokenCachePath { get; set; } = "./.token-cache";
+    /// <remarks>
+    /// One place for the whole solution rather than a path relative to whatever
+    /// the working directory happens to be: the API, the console application
+    /// and the provisioning tool are the same developer signing in to the same
+    /// environment, and a cache each means a browser window each.
+    /// </remarks>
+    public string TokenCachePath { get; set; } = DefaultTokenCachePath;
+
+    private static string DefaultTokenCachePath => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "DynamicsCrmLab",
+        "token-cache");
 }

@@ -15,13 +15,17 @@ namespace DynamicsCrmLab.Plugins.WorkOrders;
 /// Keeps the amount to invoice on a work order in step with its lines.
 /// </summary>
 /// <remarks>
-/// Register on Create and Update of dcl_workorder, stage PreOperation (20),
-/// synchronous.
+/// Register on Create, Update and Delete of dcl_workorderline, stage
+/// PostOperation (40), synchronous, with a pre image carrying dcl_workorderid.
 ///
-/// PreOperation is the point of it: the value is written onto the target and
-/// the platform saves it along with the rest of the record. Doing the same work
-/// in PostOperation would mean a second update, a second pass through the
-/// pipeline, and a plug-in that can retrigger itself.
+/// The line rather than the job is what triggers this. A job is saved before
+/// its lines exist, so a step on the job would add up an empty list and write a
+/// total of zero over a correct one. The lines are what the total is made of,
+/// so a line changing is the event worth reacting to.
+///
+/// PostOperation because the row has to be written before it can be counted,
+/// and the pre image because a deleted line carries nothing but its identifier
+/// by the time the step runs.
 ///
 /// The total is worked out by the shared domain rather than by arithmetic
 /// repeated here, so the console application and the platform can never
@@ -32,9 +36,10 @@ public sealed class WorkOrderPricingPlugin() : PluginBase(nameof(WorkOrderPricin
     /// <inheritdoc/>
     protected override void Execute(PluginContext context)
     {
-        var target = context.Target;
+        var target = context.TargetReference;
 
-        if (target is null || !string.Equals(target.LogicalName, WorkOrderSchema.EntityName, StringComparison.Ordinal))
+        if (target is null
+            || !string.Equals(target.LogicalName, WorkOrderLineSchema.EntityName, StringComparison.Ordinal))
         {
             return;
         }
@@ -46,12 +51,38 @@ public sealed class WorkOrderPricingPlugin() : PluginBase(nameof(WorkOrderPricin
             return;
         }
 
-        var lines = ReadLines(context, target.Id);
+        var workOrderId = WorkOrderIdOf(context);
+        if (workOrderId is null)
+        {
+            context.Tracing.Trace("{0}: the line belongs to no job, nothing to total", PluginName);
+
+            return;
+        }
+
+        var lines = ReadLines(context, workOrderId.Value);
         var total = TotalOf(lines);
 
         context.Tracing.Trace("{0}: {1} line(s), total {2}", PluginName, lines.Count, total);
 
-        target[WorkOrderSchema.TotalPrice] = new XrmMoney(total.Amount);
+        context.Service.Update(new Entity(WorkOrderSchema.EntityName, workOrderId.Value)
+        {
+            [WorkOrderSchema.TotalPrice] = new XrmMoney(total.Amount)
+        });
+    }
+
+    /// <summary>
+    /// Finds the job the changed line belongs to.
+    /// </summary>
+    /// <remarks>
+    /// An update carries only the columns that changed and a delete carries no
+    /// columns at all, so the pre image is what answers this in both cases.
+    /// </remarks>
+    private static Guid? WorkOrderIdOf(PluginContext context)
+    {
+        var fromTarget = context.Target?.GetAttributeValue<EntityReference>(WorkOrderLineSchema.WorkOrder);
+        var fromImage = context.PreImage()?.GetAttributeValue<EntityReference>(WorkOrderLineSchema.WorkOrder);
+
+        return (fromTarget ?? fromImage)?.Id;
     }
 
     private static DomainMoney TotalOf(IReadOnlyCollection<WorkOrderLine> lines)

@@ -14,6 +14,7 @@ builder.Logging.AddSimpleConsole(options => options.SingleLine = true);
 builder.Services.AddDataverse(builder.Configuration);
 builder.Services.AddScoped<SolutionProvisioner>();
 builder.Services.AddScoped<OrganizationLanguage>();
+builder.Services.AddScoped<PluginRegistrar>();
 builder.Services.AddScoped<SchemaProvisioner>();
 builder.Services.AddScoped<SampleDataSeeder>();
 
@@ -29,6 +30,7 @@ Console.CancelKeyPress += (_, eventArgs) =>
 using var scope = host.Services.CreateScope();
 var services = scope.ServiceProvider;
 var seedRequested = args.Contains("--seed", StringComparer.OrdinalIgnoreCase);
+var pluginPackage = PluginPackagePath(args);
 
 try
 {
@@ -38,6 +40,10 @@ try
 
     await services.GetRequiredService<SchemaProvisioner>()
         .ApplyAsync(cancellation.Token)
+        .ConfigureAwait(false);
+
+    await services.GetRequiredService<PluginRegistrar>()
+        .RegisterAsync(pluginPackage, cancellation.Token)
         .ConfigureAwait(false);
 
     if (seedRequested)
@@ -85,4 +91,37 @@ catch (InvalidOperationException exception)
 /// <summary>
 /// Marks the assembly that user secrets are stored against.
 /// </summary>
-internal sealed partial class Program;
+internal sealed partial class Program
+{
+    /// <summary>
+    /// Works out which plug-in package to upload.
+    /// </summary>
+    /// <remarks>
+    /// The release build sitting next to the source is what a developer has to
+    /// hand; a pipeline passes the path of what it just built.
+    /// </remarks>
+    /// <param name="args">The command line the tool was started with.</param>
+    /// <returns>The path of the package to upload.</returns>
+    private static string PluginPackagePath(string[] args)
+    {
+        const string Option = "--plugins";
+
+        var index = Array.FindIndex(args, argument => argument.Equals(Option, StringComparison.OrdinalIgnoreCase));
+
+        if (index >= 0 && index + 1 < args.Length)
+        {
+            return args[index + 1];
+        }
+
+        return Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory,
+            "..",
+            "..",
+            "..",
+            "..",
+            "DynamicsCrmLab.Plugins",
+            "bin",
+            "Release",
+            "dcl_DynamicsCrmLab.Plugins.1.0.0.nupkg"));
+    }
+}

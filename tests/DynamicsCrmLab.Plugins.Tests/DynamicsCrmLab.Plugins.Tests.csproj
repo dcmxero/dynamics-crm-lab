@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <!-- Matches the plug-in, which the Dataverse sandbox pins to 4.6.2. -->
@@ -28,6 +28,12 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\DynamicsCrmLab.Plugins\DynamicsCrmLab.Plugins.csproj" />
+    <!--
+      The plug-in project keeps these to itself so that they travel inside its
+      package rather than as package dependencies, so the tests ask for them.
+    -->
+    <ProjectReference Include="..\..\src\DynamicsCrmLab.Domain\DynamicsCrmLab.Domain.csproj" />
+    <ProjectReference Include="..\..\src\DynamicsCrmLab.Schema\DynamicsCrmLab.Schema.csproj" />
   </ItemGroup>
 
 </Project>

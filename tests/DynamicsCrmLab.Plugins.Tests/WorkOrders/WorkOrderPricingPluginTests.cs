@@ -14,46 +14,56 @@ public sealed class WorkOrderPricingPluginTests
     private const string WorkOrder = "dcl_workorder";
     private const string WorkOrderLine = "dcl_workorderline";
     private const string TotalPrice = "dcl_totalprice";
+    private const string ParentLookup = "dcl_workorderid";
 
     [Fact]
-    public void Execute_AddsUpTheLinesOfTheWorkOrder()
+    public void Execute_AddsUpEveryLineOfTheJobTheChangedLineBelongsTo()
     {
         var workOrderId = Guid.NewGuid();
         var context = ContextWithLines(workOrderId, (2, 45m), (1, 30m));
-        var target = new Entity(WorkOrder, workOrderId);
 
-        RunPlugin(context, target);
+        RunPlugin(context, LineOf(workOrderId));
 
-        TotalOn(target).Should().Be(120m);
+        StoredTotalFor(context, workOrderId).Should().Be(120m);
     }
 
     [Fact]
-    public void Execute_WritesTheTotalOntoTheTargetRatherThanUpdatingTheRecordAgain()
+    public void Execute_TakesTheJobFromTheImageWhenTheLineDoesNotCarryIt()
     {
         var workOrderId = Guid.NewGuid();
-        var context = ContextWithLines(workOrderId, (1, 50m));
-        var target = new Entity(WorkOrder, workOrderId);
+        var context = ContextWithLines(workOrderId, (3, 20m));
 
-        RunPlugin(context, target);
+        RunPlugin(context, new Entity(WorkOrderLine, Guid.NewGuid()), preImage: LineOf(workOrderId));
 
-        target.Contains(TotalPrice).Should().BeTrue();
-
-        // The stored row is untouched: in PreOperation the platform saves the
-        // target itself, so a separate update would be a second write and a
-        // second trip through the pipeline.
-        StoredTotalFor(context, workOrderId).Should().BeNull();
+        StoredTotalFor(context, workOrderId).Should().Be(60m);
     }
 
     [Fact]
-    public void Execute_LeavesTheTotalAtZeroWhenThereAreNoLines()
+    public void Execute_WorksOutTheTotalForADeletedLineFromTheImageAlone()
+    {
+        var workOrderId = Guid.NewGuid();
+        var context = ContextWithLines(workOrderId, (1, 25m));
+
+        RunPlugin(
+            context,
+            new EntityReference(WorkOrderLine, Guid.NewGuid()),
+            preImage: LineOf(workOrderId));
+
+        StoredTotalFor(context, workOrderId).Should().Be(25m);
+    }
+
+    [Fact]
+    public void Execute_LeavesTheTotalAtZeroWhenTheLastLineIsGone()
     {
         var workOrderId = Guid.NewGuid();
         var context = ContextWithLines(workOrderId);
-        var target = new Entity(WorkOrder, workOrderId);
 
-        RunPlugin(context, target);
+        RunPlugin(
+            context,
+            new EntityReference(WorkOrderLine, Guid.NewGuid()),
+            preImage: LineOf(workOrderId));
 
-        TotalOn(target).Should().Be(0m);
+        StoredTotalFor(context, workOrderId).Should().Be(0m);
     }
 
     [Fact]
@@ -61,23 +71,39 @@ public sealed class WorkOrderPricingPluginTests
     {
         var workOrderId = Guid.NewGuid();
         var context = ContextWithLines(workOrderId, (1, 50m));
-        var target = new Entity(WorkOrder, workOrderId);
 
-        RunPlugin(context, target, depth: 2);
+        RunPlugin(context, LineOf(workOrderId), depth: 2);
 
-        target.Contains(TotalPrice).Should().BeFalse();
+        StoredTotalFor(context, workOrderId).Should().BeNull();
+    }
+
+    [Fact]
+    public void Execute_IgnoresALineThatBelongsToNoJob()
+    {
+        var workOrderId = Guid.NewGuid();
+        var context = ContextWithLines(workOrderId, (1, 50m));
+
+        RunPlugin(context, new Entity(WorkOrderLine, Guid.NewGuid()));
+
+        StoredTotalFor(context, workOrderId).Should().BeNull();
     }
 
     [Fact]
     public void Execute_IgnoresMessagesAboutOtherTables()
     {
-        var context = new XrmFakedContext();
-        var target = new Entity("account", Guid.NewGuid());
+        var workOrderId = Guid.NewGuid();
+        var context = ContextWithLines(workOrderId, (1, 50m));
 
-        RunPlugin(context, target);
+        RunPlugin(context, new Entity("account", Guid.NewGuid()));
 
-        target.Contains(TotalPrice).Should().BeFalse();
+        StoredTotalFor(context, workOrderId).Should().BeNull();
     }
+
+    private static Entity LineOf(Guid workOrderId) =>
+        new(WorkOrderLine, Guid.NewGuid())
+        {
+            [ParentLookup] = new EntityReference(WorkOrder, workOrderId)
+        };
 
     private static XrmFakedContext ContextWithLines(Guid workOrderId, params (int Quantity, decimal UnitPrice)[] lines)
     {
@@ -90,7 +116,7 @@ public sealed class WorkOrderPricingPluginTests
 
         rows.AddRange(lines.Select(line => new Entity(WorkOrderLine, Guid.NewGuid())
         {
-            ["dcl_workorderid"] = new EntityReference(WorkOrder, workOrderId),
+            [ParentLookup] = new EntityReference(WorkOrder, workOrderId),
             ["dcl_description"] = "Technician labour",
             ["dcl_quantity"] = line.Quantity,
             ["dcl_unitprice"] = new Money(line.UnitPrice)
@@ -101,19 +127,25 @@ public sealed class WorkOrderPricingPluginTests
         return context;
     }
 
-    private static void RunPlugin(XrmFakedContext context, Entity target, int depth = 1)
+    private static void RunPlugin(
+        XrmFakedContext context,
+        object target,
+        Entity? preImage = null,
+        int depth = 1)
     {
         var pluginContext = context.GetDefaultPluginContext();
         pluginContext.MessageName = "Update";
-        pluginContext.Stage = 20;
+        pluginContext.Stage = 40;
         pluginContext.Depth = depth;
         pluginContext.InputParameters = new ParameterCollection { { "Target", target } };
 
+        if (preImage != null)
+        {
+            pluginContext.PreEntityImages = new EntityImageCollection { { "PreImage", preImage } };
+        }
+
         context.ExecutePluginWith<WorkOrderPricingPlugin>(pluginContext);
     }
-
-    private static decimal TotalOn(Entity target) =>
-        target.GetAttributeValue<Money>(TotalPrice)?.Value ?? 0m;
 
     private static decimal? StoredTotalFor(XrmFakedContext context, Guid workOrderId) =>
         context.CreateQuery(WorkOrder)

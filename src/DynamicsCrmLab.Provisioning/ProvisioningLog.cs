@@ -68,4 +68,40 @@ internal static partial class ProvisioningLog
 
     [LoggerMessage(EventId = 2013, Level = LogLevel.Information, Message = "Created {Table} {Value}.")]
     public static partial void RecordCreated(ILogger logger, string table, string value);
+
+    [LoggerMessage(EventId = 2014, Level = LogLevel.Information, Message = "Registered plug-in package {Name}.")]
+    public static partial void PackageRegistered(ILogger logger, string name);
+
+    [LoggerMessage(
+        EventId = 2015,
+        Level = LogLevel.Information,
+        Message = "Uploaded plug-in package {Name} over the one already there.")]
+    public static partial void PackageUpdated(ILogger logger, string name);
+
+    [LoggerMessage(EventId = 2016, Level = LogLevel.Information, Message = "Plug-in {Type} is already there.")]
+    public static partial void PluginTypeExists(ILogger logger, string type);
+
+    [LoggerMessage(EventId = 2017, Level = LogLevel.Information, Message = "Registered plug-in {Type}.")]
+    public static partial void PluginTypeRegistered(ILogger logger, string type);
+
+    [LoggerMessage(EventId = 2018, Level = LogLevel.Information, Message = "Step {Step} is already there.")]
+    public static partial void StepExists(ILogger logger, string step);
+
+    [LoggerMessage(
+        EventId = 2019,
+        Level = LogLevel.Information,
+        Message = "Registered step {Step} at {Stage}, {Mode}.")]
+    public static partial void StepRegistered(ILogger logger, string step, PipelineStage stage, ExecutionMode mode);
+
+    [LoggerMessage(
+        EventId = 2022,
+        Level = LogLevel.Information,
+        Message = "Removed step {Step}, which the code no longer declares.")]
+    public static partial void StepRemoved(ILogger logger, string step);
+
+    [LoggerMessage(EventId = 2020, Level = LogLevel.Information, Message = "Pre image on {Step} is already there.")]
+    public static partial void ImageExists(ILogger logger, string step);
+
+    [LoggerMessage(EventId = 2021, Level = LogLevel.Information, Message = "Registered the pre image on {Step}.")]
+    public static partial void ImageRegistered(ILogger logger, string step);
 }

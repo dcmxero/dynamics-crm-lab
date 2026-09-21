@@ -33,6 +33,8 @@
     <!-- Generates the types .NET Standard 2.0 lacks (records, Index, Range) so
          the domain can be shared with the plug-in. Compile time only. -->
     <PackageVersion Include="PolySharp" Version="1.15.0" />
+    <!-- Packs the plug-in and its references into the package the sandbox accepts. -->
+    <PackageVersion Include="Microsoft.PowerApps.MSBuild.Plugin" Version="1.46.1" />
     <!-- Lets the plug-in target .NET Framework 4.6.2 without Visual Studio. -->
     <PackageVersion Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" />
     <!-- IPlugin, IOrganizationService and friends; already present in the sandbox. -->
