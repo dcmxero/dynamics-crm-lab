@@ -45,6 +45,7 @@ exception - it is an ordinary answer to the request, not a program failure.
 |---|---|
 | `RaiseWorkOrder` | opens a job against a customer and their equipment |
 | `AssignWorkOrder` | puts a technician on it, picking one when none is named |
+| `StartWorkOrder` | records that the technician has started on it |
 | `CloseWorkOrder` | finishes it and records what was done |
 
 ## Dataverse
@@ -66,13 +67,22 @@ application rather than a second copy that would drift.
 
 | Plug-in | Registration |
 |---|---|
-| `WorkOrderPricingPlugin` | Create and Update of `dcl_workorder`, PreOperation, synchronous |
+| `WorkOrderPricingPlugin` | Create, Update and Delete of `dcl_workorderline`, PostOperation, synchronous, pre image `dcl_workorderid` |
 | `WorkOrderClosedNotificationPlugin` | Update of `dcl_workorder`, filtering attribute `dcl_status`, PostOperation, **asynchronous**, pre image `dcl_status` and `dcl_number` |
 
-Pricing runs in PreOperation and writes onto the target, so the platform saves
-the value with the rest of the record instead of a second update that could
-retrigger the plug-in. The notification runs asynchronously because nobody
-saving the form needs to wait for a follow-up task to exist.
+Pricing is triggered by the line rather than by the job: a job is saved before
+its lines exist, so a step on the job would add up an empty list. The
+notification runs asynchronously because nobody saving the form needs to wait
+for a follow-up task to exist.
+
+The sandbox loads the assembly it is given and nothing beside it, so the
+plug-ins travel as a **plug-in package** carrying the domain with them. The
+package name has to start with the publisher prefix.
+
+Registration is code rather than clicks. `DynamicsCrmLab.Provisioning` uploads
+the package, declares each step beside the plug-in it runs, and removes steps
+the code no longer declares, so an environment can be rebuilt without anyone
+remembering what was set in the registration tool.
 
 Tests run against an in-memory Dataverse, so they need no environment either.
 
@@ -182,7 +192,10 @@ model-driven app.
 
 ## Getting the solution in and out of Dataverse
 
-A solution zip is opaque to git, so the unpacked form is what lives here:
+A solution zip is opaque to git, so the unpacked form is what lives here, under
+`solutions/DynamicsCrmLab`. It carries the tables, the PCF control, the plug-in
+package and the registered steps with their images, which is what makes an
+import reproducible without anyone repeating a sequence of clicks.
 
 ```bash
 pac auth create --environment https://your-org.crm4.dynamics.com

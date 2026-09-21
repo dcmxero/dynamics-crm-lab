@@ -1,0 +1,34 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<savedqueries xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <savedquery>
+    <IsCustomizable>1</IsCustomizable>
+    <CanBeDeleted>0</CanBeDeleted>
+    <isquickfindquery>0</isquickfindquery>
+    <isprivate>0</isprivate>
+    <isdefault>1</isdefault>
+    <savedqueryid>{3ba34385-3997-42eb-a7b9-f6480c3095d8}</savedqueryid>
+    <layoutxml>
+      <grid name="resultset" jump="dcl_name" select="1" icon="1" preview="1">
+        <row name="result" id="dcl_technicianid">
+          <cell name="dcl_name" width="300" />
+          <cell name="createdon" width="125" />
+        </row>
+      </grid>
+    </layoutxml>
+    <querytype>1</querytype>
+    <fetchxml>
+      <fetch version="1.0" mapping="logical">
+        <entity name="dcl_technician">
+          <attribute name="dcl_technicianid" />
+          <attribute name="dcl_name" />
+          <attribute name="createdon" />
+          <order attribute="dcl_name" descending="false" />
+        </entity>
+      </fetch>
+    </fetchxml>
+    <IntroducedVersion>1.0.0.0</IntroducedVersion>
+    <LocalizedNames>
+      <LocalizedName description="Technician Advanced Find View" languagecode="1051" />
+    </LocalizedNames>
+  </savedquery>
+</savedqueries>

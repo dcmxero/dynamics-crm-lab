@@ -20,9 +20,8 @@
 
     <resources>
       <code path="index.ts" order="1" />
-      <!-- React and Fluent come from the host, so they are not bundled. -->
+      <!-- React comes from the host, so it is not bundled. -->
       <platform-library name="React" version="16.14.0" />
-      <platform-library name="Fluent" version="9.68.0" />
     </resources>
 
   </control>

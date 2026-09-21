@@ -1,0 +1,112 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<forms xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <systemform>
+    <formid>{f79317bf-5cfc-4964-8dfe-905a9175d3c8}</formid>
+    <IntroducedVersion>1.0.0.0</IntroducedVersion>
+    <FormPresentation>1</FormPresentation>
+    <FormActivationState>1</FormActivationState>
+    <form>
+      <tabs>
+        <tab name="general" verticallayout="true" id="{d7971974-fb90-44f2-8dd8-ecd152dcbb2e}" IsUserDefined="0">
+          <labels>
+            <label description="" languagecode="1051" />
+          </labels>
+          <columns>
+            <column width="25%">
+              <sections>
+                <section name="ColorStrip" showlabel="false" showbar="false" columns="1" IsUserDefined="0" id="{f4abdcec-c8a8-41d6-9fcf-059926c25d8a}">
+                  <labels>
+                    <label description="ColorStrip" languagecode="1051" />
+                  </labels>
+                </section>
+              </sections>
+            </column>
+            <column width="75%">
+              <sections>
+                <section name="CardHeader" showlabel="false" showbar="false" columns="111" id="{642dbf89-f3d1-4b63-816d-22a26ad64a9d}" IsUserDefined="0">
+                  <labels>
+                    <label description="Hlavička" languagecode="1051" />
+                  </labels>
+                  <rows>
+                    <row>
+                      <cell id="{8c714686-c7df-409c-a43a-18957e894706}" showlabel="true" locklevel="0">
+                        <labels>
+                          <label description="Status Reason" languagecode="1051" />
+                        </labels>
+                        <control id="statuscode" classid="{5D68B988-0661-4db2-BC3E-17598AD3BE6C}" datafieldname="statuscode" disabled="false" />
+                      </cell>
+                      <cell id="{41eaf678-be61-4879-bd3a-24a0d6b1497a}" showlabel="true" locklevel="0">
+                        <labels>
+                          <label description="" languagecode="1051" />
+                        </labels>
+                      </cell>
+                      <cell id="{a4a5d7f9-dfac-4302-94bd-ec7a4da1f000}" showlabel="true" locklevel="0">
+                        <labels>
+                          <label description="" languagecode="1051" />
+                        </labels>
+                      </cell>
+                    </row>
+                  </rows>
+                </section>
+                <section name="CardDetails" showlabel="false" showbar="false" columns="1" id="{469f721e-553e-4285-9a7d-df68ba522262}" IsUserDefined="0">
+                  <labels>
+                    <label description="Podrobnosti" languagecode="1051" />
+                  </labels>
+                  <rows>
+                    <row>
+                      <cell id="{a0f3d617-1ed5-43b0-abaf-bb3290689a42}" showlabel="true" locklevel="0">
+                        <labels>
+                          <label description="Serial number" languagecode="1051" />
+                        </labels>
+                        <control id="dcl_serialnumber" classid="{4273EDBD-AC1D-40d3-9FB2-095C621B552D}" datafieldname="dcl_serialnumber" disabled="false" />
+                      </cell>
+                    </row>
+                  </rows>
+                </section>
+                <section name="CardFooter" showlabel="false" columns="1111" showbar="false" id="{67ae51bc-edaf-4b48-9d16-23c542ca6818}" IsUserDefined="0">
+                  <labels>
+                    <label description="Päta" languagecode="1051" />
+                  </labels>
+                  <rows>
+                    <row>
+                      <cell id="{68cf6861-a0b9-4efe-9c35-8aeb7377ed1d}" showlabel="true" locklevel="0">
+                        <labels>
+                          <label description="Owner" languagecode="1051" />
+                        </labels>
+                        <control id="ownerid" classid="{270BD3DB-D9AF-4782-9025-509E298DEC0A}" datafieldname="ownerid" disabled="false" />
+                      </cell>
+                      <cell id="{16aa8039-01f4-4556-8deb-45bf00a2b3e2}" showlabel="true" locklevel="0">
+                        <labels>
+                          <label description="Created On" languagecode="1051" />
+                        </labels>
+                        <control id="createdon" classid="{270BD3DB-D9AF-4782-9025-509E298DEC0A}" datafieldname="createdon" disabled="false" />
+                      </cell>
+                      <cell id="{8b404660-7972-4edb-b4cf-765035ad424f}" showlabel="true" locklevel="0">
+                        <labels>
+                          <label description="" languagecode="1051" />
+                        </labels>
+                      </cell>
+                      <cell id="{1e9283f8-f6bb-4fd5-8ab3-8d0d8986bc71}" showlabel="true" locklevel="0">
+                        <labels>
+                          <label description="" languagecode="1051" />
+                        </labels>
+                      </cell>
+                    </row>
+                  </rows>
+                </section>
+              </sections>
+            </column>
+          </columns>
+        </tab>
+      </tabs>
+    </form>
+    <IsCustomizable>1</IsCustomizable>
+    <CanBeDeleted>1</CanBeDeleted>
+    <LocalizedNames>
+      <LocalizedName description="Information" languagecode="1051" />
+    </LocalizedNames>
+    <Descriptions>
+      <Description description="Formulár karty pre túto entitu." languagecode="1051" />
+    </Descriptions>
+  </systemform>
+</forms>

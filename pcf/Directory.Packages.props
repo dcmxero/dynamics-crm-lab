@@ -1,0 +1,13 @@
+<Project>
+
+  <PropertyGroup>
+    <!--
+      The component project and the solution wrapper the tooling generates state
+      their package versions themselves, and central management refuses a
+      version stated in a project. This file stops the search here so the rest
+      of the repository can keep managing versions centrally.
+    -->
+    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+
+</Project>

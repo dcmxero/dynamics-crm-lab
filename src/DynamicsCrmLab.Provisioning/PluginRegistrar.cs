@@ -1,5 +1,6 @@
 using DynamicsCrmLab.Infrastructure.Dataverse;
 using DynamicsCrmLab.Schema;
+using Microsoft.Crm.Sdk.Messages;
 using Microsoft.Extensions.Logging;
 using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Query;
@@ -35,6 +36,9 @@ internal sealed class PluginRegistrar(IDataverseClient client, ILogger<PluginReg
 
     /// <summary>Captures the record as it was before the write.</summary>
     private const int PreImageType = 0;
+
+    /// <summary>The component type the platform uses for a registered step.</summary>
+    private const int StepComponentType = 92;
 
     private static readonly PluginStep[] Steps =
     [
@@ -202,6 +206,10 @@ internal sealed class PluginRegistrar(IDataverseClient client, ILogger<PluginReg
         {
             ProvisioningLog.StepExists(logger, step.Name);
 
+            // Adding a component that is already in the solution changes
+            // nothing, so a step registered before this ran is picked up too.
+            await AddToSolutionAsync(stepId, cancellationToken).ConfigureAwait(false);
+
             await EnsurePreImageAsync(stepId, step, cancellationToken).ConfigureAwait(false);
 
             return;
@@ -235,7 +243,33 @@ internal sealed class PluginRegistrar(IDataverseClient client, ILogger<PluginReg
 
         ProvisioningLog.StepRegistered(logger, step.Name, step.Stage, step.Mode);
 
+        await AddToSolutionAsync(created, cancellationToken).ConfigureAwait(false);
+
         await EnsurePreImageAsync(created, step, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Puts a step, and everything it needs, into the solution.
+    /// </summary>
+    /// <remarks>
+    /// A step created on its own belongs to no solution, so it is left behind
+    /// by an export and has to be registered by hand on the next environment.
+    /// The required components carry the plug-in, its assembly and the package
+    /// along with it.
+    /// </remarks>
+    private async Task AddToSolutionAsync(Guid stepId, CancellationToken cancellationToken)
+    {
+        await client.ExecuteAsync(
+            new AddSolutionComponentRequest
+            {
+                ComponentId = stepId,
+                ComponentType = StepComponentType,
+                SolutionUniqueName = SolutionProvisioner.SolutionUniqueName,
+                AddRequiredComponents = true
+            },
+            cancellationToken).ConfigureAwait(false);
+
+        ProvisioningLog.ComponentAdded(logger, stepId);
     }
 
     private async Task EnsurePreImageAsync(Guid stepId, PluginStep step, CancellationToken cancellationToken)

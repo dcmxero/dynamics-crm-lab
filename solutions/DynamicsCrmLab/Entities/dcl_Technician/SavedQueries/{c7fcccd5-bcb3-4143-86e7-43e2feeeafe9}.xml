@@ -1,0 +1,36 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<savedqueries xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <savedquery>
+    <IsCustomizable>1</IsCustomizable>
+    <CanBeDeleted>0</CanBeDeleted>
+    <isquickfindquery>0</isquickfindquery>
+    <isprivate>0</isprivate>
+    <isdefault>1</isdefault>
+    <savedqueryid>{c7fcccd5-bcb3-4143-86e7-43e2feeeafe9}</savedqueryid>
+    <layoutxml>
+      <grid name="dcl_technicians" jump="dcl_name" select="1" icon="1" preview="0">
+        <row name="dcl_technician" id="dcl_technicianid">
+          <cell name="dcl_name" width="300" />
+          <cell name="createdon" width="125" />
+        </row>
+      </grid>
+    </layoutxml>
+    <querytype>64</querytype>
+    <fetchxml>
+      <fetch version="1.0" mapping="logical">
+        <entity name="dcl_technician">
+          <attribute name="dcl_technicianid" />
+          <attribute name="dcl_name" />
+          <attribute name="createdon" />
+          <filter type="and">
+            <condition attribute="statecode" operator="eq" value="0" />
+          </filter>
+        </entity>
+      </fetch>
+    </fetchxml>
+    <IntroducedVersion>1.0.0.0</IntroducedVersion>
+    <LocalizedNames>
+      <LocalizedName description="Technician Lookup View" languagecode="1051" />
+    </LocalizedNames>
+  </savedquery>
+</savedqueries>

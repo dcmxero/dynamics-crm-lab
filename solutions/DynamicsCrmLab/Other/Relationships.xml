@@ -1,0 +1,34 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<EntityRelationships xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <EntityRelationship Name="business_unit_dcl_equipment" />
+  <EntityRelationship Name="business_unit_dcl_technician" />
+  <EntityRelationship Name="business_unit_dcl_workorder" />
+  <EntityRelationship Name="business_unit_dcl_workorderline" />
+  <EntityRelationship Name="dcl_contact_equipment" />
+  <EntityRelationship Name="dcl_contact_workorder" />
+  <EntityRelationship Name="dcl_equipment_workorder" />
+  <EntityRelationship Name="dcl_technician_workorder" />
+  <EntityRelationship Name="dcl_workorder_workorderline" />
+  <EntityRelationship Name="lk_dcl_equipment_createdby" />
+  <EntityRelationship Name="lk_dcl_equipment_modifiedby" />
+  <EntityRelationship Name="lk_dcl_technician_createdby" />
+  <EntityRelationship Name="lk_dcl_technician_modifiedby" />
+  <EntityRelationship Name="lk_dcl_workorder_createdby" />
+  <EntityRelationship Name="lk_dcl_workorder_modifiedby" />
+  <EntityRelationship Name="lk_dcl_workorderline_createdby" />
+  <EntityRelationship Name="lk_dcl_workorderline_modifiedby" />
+  <EntityRelationship Name="owner_dcl_equipment" />
+  <EntityRelationship Name="owner_dcl_technician" />
+  <EntityRelationship Name="owner_dcl_workorder" />
+  <EntityRelationship Name="owner_dcl_workorderline" />
+  <EntityRelationship Name="team_dcl_equipment" />
+  <EntityRelationship Name="team_dcl_technician" />
+  <EntityRelationship Name="team_dcl_workorder" />
+  <EntityRelationship Name="team_dcl_workorderline" />
+  <EntityRelationship Name="TransactionCurrency_dcl_WorkOrder" />
+  <EntityRelationship Name="TransactionCurrency_dcl_WorkOrderLine" />
+  <EntityRelationship Name="user_dcl_equipment" />
+  <EntityRelationship Name="user_dcl_technician" />
+  <EntityRelationship Name="user_dcl_workorder" />
+  <EntityRelationship Name="user_dcl_workorderline" />
+</EntityRelationships>

@@ -1,0 +1,37 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<savedqueries xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <savedquery>
+    <IsCustomizable>1</IsCustomizable>
+    <CanBeDeleted>0</CanBeDeleted>
+    <isquickfindquery>0</isquickfindquery>
+    <isprivate>0</isprivate>
+    <isdefault>0</isdefault>
+    <savedqueryid>{f48743e2-a815-417a-b9eb-884dbc3008ec}</savedqueryid>
+    <layoutxml>
+      <grid name="resultset" jump="dcl_description" select="1" icon="1" preview="1">
+        <row name="result" id="dcl_workorderlineid">
+          <cell name="dcl_description" width="300" />
+          <cell name="createdon" width="125" />
+        </row>
+      </grid>
+    </layoutxml>
+    <querytype>0</querytype>
+    <fetchxml>
+      <fetch version="1.0" mapping="logical">
+        <entity name="dcl_workorderline">
+          <attribute name="dcl_workorderlineid" />
+          <attribute name="dcl_description" />
+          <attribute name="createdon" />
+          <order attribute="dcl_description" descending="false" />
+          <filter type="and">
+            <condition attribute="statecode" operator="eq" value="1" />
+          </filter>
+        </entity>
+      </fetch>
+    </fetchxml>
+    <IntroducedVersion>1.0.0.0</IntroducedVersion>
+    <LocalizedNames>
+      <LocalizedName description="Inactive Work order lines" languagecode="1051" />
+    </LocalizedNames>
+  </savedquery>
+</savedqueries>
