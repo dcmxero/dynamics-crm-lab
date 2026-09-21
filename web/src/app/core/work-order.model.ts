@@ -40,6 +40,7 @@ export interface WorkOrder {
   readonly customerId: string;
   readonly equipmentId: string;
   readonly technicianId: string | null;
+  readonly technicianName: string | null;
   readonly status: WorkOrderStatus;
   readonly resolution: string | null;
   readonly totalPrice: number;

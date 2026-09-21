@@ -22,6 +22,7 @@ const detail = {
   ...summary,
   customerId: '11111111-1111-1111-1111-111111111111',
   equipmentId: '22222222-2222-2222-2222-222222222222',
+  technicianName: null,
   resolution: null,
   lines: [
     {
@@ -108,6 +109,24 @@ test('shows what the job refused rather than an error page', async ({ page }) =>
   await expect(page.getByText('Only an in-progress work order can be closed')).toBeVisible();
 });
 
+test('names the technician on the job rather than identifying them', async ({ page }) => {
+  await page.route(`**/api/work-orders/${JOB_ID}`, (route) =>
+    route.fulfill({
+      json: {
+        ...detail,
+        status: 'Assigned',
+        technicianId: '55555555-5555-5555-5555-555555555555',
+        technicianName: 'Zuzana Bielikova',
+      },
+      status: 200,
+    }),
+  );
+
+  await page.goto(`/work-orders/${JOB_ID}`);
+
+  await expect(page.getByText('Zuzana Bielikova')).toBeVisible();
+});
+
 test('offers starting the work only once somebody is on the job', async ({ page }) => {
   await stubDetail(page);
 
@@ -119,7 +138,12 @@ test('offers starting the work only once somebody is on the job', async ({ page 
 test('starts the work on an assigned job', async ({ page }) => {
   await page.route(`**/api/work-orders/${JOB_ID}`, (route) =>
     route.fulfill({
-      json: { ...detail, status: 'Assigned', technicianId: '55555555-5555-5555-5555-555555555555' },
+      json: {
+        ...detail,
+        status: 'Assigned',
+        technicianId: '55555555-5555-5555-5555-555555555555',
+        technicianName: 'Zuzana Bielikova',
+      },
       status: 200,
     }),
   );

@@ -196,6 +196,22 @@ public sealed class WorkOrderEndpointsTests(WorkOrderApiFactoryFixture fixture)
         response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
     }
 
+    [Fact]
+    public async Task Get_NamesTheTechnicianRatherThanOnlyIdentifyingThem()
+    {
+        var workOrder = StoredWorkOrder();
+        var technician = _factory.Store.AddTechnician();
+
+        await _client.PostAsJsonAsync(
+            $"/api/work-orders/{workOrder.Id}/assignment",
+            new { technicianId = technician.Id });
+
+        var response = await _client.GetAsync($"/api/work-orders/{workOrder.Id}");
+
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        body.GetProperty("technicianName").GetString().Should().Be(technician.FullName);
+    }
+
     private WorkOrder StoredWorkOrder()
     {
         var customer = _factory.Store.AddCustomer();

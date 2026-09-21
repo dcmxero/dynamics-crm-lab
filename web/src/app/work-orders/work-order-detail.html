@@ -19,7 +19,7 @@
     <dd>{{ labels[order.status] }}</dd>
 
     <dt>Technician</dt>
-    <dd>{{ order.technicianId ?? 'Not assigned' }}</dd>
+    <dd>{{ order.technicianName ?? 'Not assigned' }}</dd>
 
     <dt>Total</dt>
     <dd>{{ order.totalPrice | currency: order.currency }}</dd>
