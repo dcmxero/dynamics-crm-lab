@@ -63,6 +63,12 @@ internal static partial class ProvisioningLog
         Message = "Created the alternate key on the work order number.")]
     public static partial void KeyCreated(ILogger logger);
 
+    [LoggerMessage(
+        EventId = 2024,
+        Level = LogLevel.Information,
+        Message = "Added component {Component} and what it needs to the solution.")]
+    public static partial void ComponentAdded(ILogger logger, Guid component);
+
     [LoggerMessage(EventId = 2023, Level = LogLevel.Information, Message = "Turned activities on for {Table}.")]
     public static partial void ActivitiesEnabled(ILogger logger, string table);
 
