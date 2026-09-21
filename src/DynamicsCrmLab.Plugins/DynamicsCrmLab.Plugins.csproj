@@ -7,6 +7,24 @@
     -->
     <TargetFramework>net462</TargetFramework>
     <SignAssembly>true</SignAssembly>
+    <!--
+      The sandbox loads one assembly and nothing beside it, so a plug-in that
+      shares the domain with the rest of the solution has to travel as a
+      package: the build produces a NuGet file carrying the plug-in and every
+      assembly it references.
+    -->
+    <!-- The platform requires the publisher prefix in the package name. -->
+    <PackageId>dcl_DynamicsCrmLab.Plugins</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>Dynamics CRM Lab</Authors>
+    <Description>Work order plug-ins and the domain they share with the rest of the solution.</Description>
+    <IncludeBuildOutput>true</IncludeBuildOutput>
+    <!--
+      A plug-in package lays its assemblies out for the sandbox rather than as a
+      library for other projects to compile against, so the check for lib/ folders
+      does not apply.
+    -->
+    <NoWarn>$(NoWarn);NU5128</NoWarn>
     <AssemblyOriginatorKeyFile>$(MSBuildThisFileDirectory)../../build/DynamicsCrmLab.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
 
@@ -19,11 +37,19 @@
       <!-- Present in the sandbox already, so it must not ship with the plug-in. -->
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.PowerApps.MSBuild.Plugin">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\DynamicsCrmLab.Domain\DynamicsCrmLab.Domain.csproj" />
-    <ProjectReference Include="..\DynamicsCrmLab.Schema\DynamicsCrmLab.Schema.csproj" />
+    <!--
+      The package carries these assemblies itself. Declaring them as package
+      dependencies as well would send the platform looking for them by name,
+      which it refuses to do for names without the publisher prefix.
+    -->
+    <ProjectReference Include="..\DynamicsCrmLab.Domain\DynamicsCrmLab.Domain.csproj" PrivateAssets="all" />
+    <ProjectReference Include="..\DynamicsCrmLab.Schema\DynamicsCrmLab.Schema.csproj" PrivateAssets="all" />
   </ItemGroup>
 
 </Project>
