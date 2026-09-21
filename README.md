@@ -150,6 +150,18 @@ The Playwright suite stubs the API at the network layer, so it exercises the
 client on its own. What the server does with a request is covered by the API
 tests instead.
 
+## The model-driven app
+
+`Field Service` is the app the solution carries: work orders, equipment,
+technicians and the customers behind them, with the lifecycle plug-ins holding
+the rules underneath. The work order form binds the stage column to the code
+component below rather than to the stock choice control.
+
+An app, a form layout and a site map are the parts of this that are made by
+clicking rather than by writing, which is what the unpacked solution in
+`solutions/` is for: they are reviewed and moved between environments as files
+like everything else.
+
 ## Custom UI
 
 `pcf/WorkOrderStatusTrack` is a Power Apps component framework control that
