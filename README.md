@@ -247,9 +247,10 @@ dotnet run -- assign <workOrderId>
 dotnet run -- close <workOrderId> "Replaced the compressor seal."
 ```
 
-The first run opens a browser to sign in and caches the token, so later runs do
-not ask again. For a service or a pipeline, switch to an Entra ID application
-registration instead:
+The first run opens a browser to sign in and caches the token under
+`%LOCALAPPDATA%/DynamicsCrmLab`, which every tool here shares, so signing in once
+covers the console application, the API and the provisioning tool. For a service
+or a pipeline, switch to an Entra ID application registration instead:
 
 ```bash
 dotnet user-secrets set "Dataverse:AuthMode" "ClientSecret"

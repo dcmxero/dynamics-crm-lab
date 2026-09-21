@@ -108,6 +108,18 @@ internal static partial class ProvisioningLog
         Message = "Removed step {Step}, which the code no longer declares.")]
     public static partial void StepRemoved(ILogger logger, string step);
 
+    [LoggerMessage(
+        EventId = 2025,
+        Level = LogLevel.Information,
+        Message = "Corrected step {Step} back to {Stage}, {Mode}.")]
+    public static partial void StepCorrected(ILogger logger, string step, PipelineStage stage, ExecutionMode mode);
+
+    [LoggerMessage(
+        EventId = 2026,
+        Level = LogLevel.Information,
+        Message = "Corrected the columns on the pre image of {Step}.")]
+    public static partial void ImageCorrected(ILogger logger, string step);
+
     [LoggerMessage(EventId = 2020, Level = LogLevel.Information, Message = "Pre image on {Step} is already there.")]
     public static partial void ImageExists(ILogger logger, string step);
 

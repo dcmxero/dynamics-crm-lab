@@ -1,5 +1,13 @@
 import { Component, inject, signal } from '@angular/core';
-import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import {
+  AbstractControl,
+  FormArray,
+  FormBuilder,
+  FormGroup,
+  ReactiveFormsModule,
+  ValidationErrors,
+  Validators,
+} from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -8,6 +16,19 @@ import { MatInputModule } from '@angular/material/input';
 import { Router } from '@angular/router';
 import { WorkOrderService } from '../core/work-order.service';
 import { ApiFailure } from '../core/work-order.model';
+
+/**
+ * Rejects a quantity that is not a whole number.
+ *
+ * The number input allows a fraction whatever its step says, and the column
+ * behind it holds whole numbers, so a typed 1.5 would otherwise travel to the
+ * API only to be refused there.
+ */
+function wholeNumber(control: AbstractControl): ValidationErrors | null {
+  const value = control.value as unknown;
+
+  return typeof value === 'number' && !Number.isInteger(value) ? { wholeNumber: true } : null;
+}
 
 /** Matches the identifier format the API expects for lookups. */
 const GUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -88,7 +109,10 @@ export class RaiseWorkOrder {
   private newLine(): FormGroup {
     return this.builder.nonNullable.group({
       description: ['', [Validators.required, Validators.maxLength(200)]],
-      quantity: [1, [Validators.required, Validators.min(1)]],
+      // The column behind this holds whole numbers between 1 and 10,000, so a
+      // form that accepts anything else is offering a request the platform
+      // refuses.
+      quantity: [1, [Validators.required, Validators.min(1), Validators.max(10000), wholeNumber]],
       unitPrice: [0, [Validators.required, Validators.min(0)]],
     });
   }

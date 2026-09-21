@@ -91,13 +91,15 @@ test('opens a job from the list and shows its charges', async ({ page }) => {
 });
 
 test('shows what the job refused rather than an error page', async ({ page }) => {
-  await stubDetail(page);
+  await page.route(`**/api/work-orders/${JOB_ID}`, (route) =>
+    route.fulfill({ json: { ...detail, status: 'InProgress' }, status: 200 }),
+  );
   await page.route(`**/api/work-orders/${JOB_ID}/closure`, (route) =>
     route.fulfill({
       status: 422,
       json: {
         title: 'The job does not allow this',
-        detail: 'Only an in-progress work order can be closed, current status is New.',
+        detail: 'A closed work order cannot be closed again.',
       },
     }),
   );
@@ -106,7 +108,15 @@ test('shows what the job refused rather than an error page', async ({ page }) =>
   await page.getByLabel('Resolution').fill('Replaced the compressor seal.');
   await page.getByRole('button', { name: 'Close the job' }).click();
 
-  await expect(page.getByText('Only an in-progress work order can be closed')).toBeVisible();
+  await expect(page.getByText('A closed work order cannot be closed again.')).toBeVisible();
+});
+
+test('offers closing only a job that has been started', async ({ page }) => {
+  await stubDetail(page);
+
+  await page.goto(`/work-orders/${JOB_ID}`);
+
+  await expect(page.getByRole('button', { name: 'Close the job' })).toBeDisabled();
 });
 
 test('names the technician on the job rather than identifying them', async ({ page }) => {
@@ -161,7 +171,9 @@ test('starts the work on an assigned job', async ({ page }) => {
 });
 
 test('keeps an empty resolution from being submitted', async ({ page }) => {
-  await stubDetail(page);
+  await page.route(`**/api/work-orders/${JOB_ID}`, (route) =>
+    route.fulfill({ json: { ...detail, status: 'InProgress' }, status: 200 }),
+  );
 
   await page.goto(`/work-orders/${JOB_ID}`);
   await page.getByRole('button', { name: 'Close the job' }).click();

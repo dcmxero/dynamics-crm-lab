@@ -1,3 +1,4 @@
+using DynamicsCrmLab.Application.Abstractions;
 using DynamicsCrmLab.Application.Tests.Fakes;
 using DynamicsCrmLab.Application.UseCases.RaiseWorkOrder;
 using DynamicsCrmLab.Domain.Common;
@@ -63,6 +64,24 @@ public sealed class RaiseWorkOrderHandlerTests
 
         result.IsSuccess.Should().BeFalse();
         result.Error.Should().Contain("quantity");
+        _workOrders.Stored.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task HandleAsync_RefusesEquipmentThatBelongsToAnotherCustomer()
+    {
+        var customer = _customers.Add();
+        var other = _customers.Add();
+        var theirUnit = _equipment.Add(other.Id);
+
+        var result = await _handler.HandleAsync(new RaiseWorkOrderCommand(
+            customer.Id,
+            theirUnit.Id,
+            [new WorkOrderLineInput("Technician labour", 1, 45m)]));
+
+        result.IsSuccess.Should().BeFalse();
+        result.Failure.Should().Be(ResultFailure.RuleBroken);
+        result.Error.Should().Contain("does not belong to");
         _workOrders.Stored.Should().BeEmpty();
     }
 

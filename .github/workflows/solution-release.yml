@@ -1,4 +1,4 @@
-﻿# Moves a solution from the development environment to the test one.
+# Moves a solution from the development environment to the test one.
 #
 # The shape of it is the point: develop against an unmanaged solution, keep the
 # unpacked form under source control, and import a managed build downstream.
@@ -28,6 +28,11 @@ jobs:
   export:
     name: Export from development
     runs-on: windows-latest
+
+    # The job commits the unpacked solution back, which the default read-only
+    # token cannot do.
+    permissions:
+      contents: write
 
     steps:
       - uses: actions/checkout@v5

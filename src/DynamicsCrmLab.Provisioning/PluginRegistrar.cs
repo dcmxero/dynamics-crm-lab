@@ -196,21 +196,17 @@ internal sealed class PluginRegistrar(IDataverseClient client, ILogger<PluginReg
 
     private async Task EnsureStepAsync(Guid typeId, PluginStep step, CancellationToken cancellationToken)
     {
-        var existing = await FindAsync(
-            "sdkmessageprocessingstep",
-            "name",
-            step.Name,
-            cancellationToken).ConfigureAwait(false);
+        var existing = await FindStepAsync(step.Name, cancellationToken).ConfigureAwait(false);
 
-        if (existing is { } stepId)
+        if (existing is { } registered)
         {
-            ProvisioningLog.StepExists(logger, step.Name);
+            await ReconcileStepAsync(registered, step, cancellationToken).ConfigureAwait(false);
 
             // Adding a component that is already in the solution changes
             // nothing, so a step registered before this ran is picked up too.
-            await AddToSolutionAsync(stepId, cancellationToken).ConfigureAwait(false);
+            await AddToSolutionAsync(registered.Id, cancellationToken).ConfigureAwait(false);
 
-            await EnsurePreImageAsync(stepId, step, cancellationToken).ConfigureAwait(false);
+            await EnsurePreImageAsync(registered.Id, step, cancellationToken).ConfigureAwait(false);
 
             return;
         }
@@ -281,7 +277,7 @@ internal sealed class PluginRegistrar(IDataverseClient client, ILogger<PluginReg
 
         var query = new QueryExpression("sdkmessageprocessingstepimage")
         {
-            ColumnSet = new ColumnSet(false),
+            ColumnSet = new ColumnSet("attributes"),
             Criteria = new FilterExpression
             {
                 Conditions =
@@ -299,7 +295,21 @@ internal sealed class PluginRegistrar(IDataverseClient client, ILogger<PluginReg
 
         if (found.Entities.Count > 0)
         {
-            ProvisioningLog.ImageExists(logger, step.Name);
+            var image = found.Entities[0];
+            var wanted = string.Join(",", columns);
+
+            if (string.Equals(image.GetAttributeValue<string>("attributes"), wanted, StringComparison.Ordinal))
+            {
+                ProvisioningLog.ImageExists(logger, step.Name);
+
+                return;
+            }
+
+            await client.UpdateAsync(
+                new Entity("sdkmessageprocessingstepimage", image.Id) { ["attributes"] = wanted },
+                cancellationToken).ConfigureAwait(false);
+
+            ProvisioningLog.ImageCorrected(logger, step.Name);
 
             return;
         }
@@ -349,6 +359,67 @@ internal sealed class PluginRegistrar(IDataverseClient client, ILogger<PluginReg
             ? throw new InvalidOperationException(
                 $"The platform has no filter for that message on {entityName}.")
             : found.Entities[0].Id;
+    }
+
+    /// <summary>
+    /// Brings a step that is already registered back to what the code declares.
+    /// </summary>
+    /// <remarks>
+    /// Accepting a step because something of that name exists is how a
+    /// registration drifts: someone switches it to synchronous to debug it and
+    /// the next run reports it present. The stage, the mode and the filtering
+    /// attributes are what make a step the step it is, so they are compared.
+    /// </remarks>
+    private async Task ReconcileStepAsync(
+        Entity registered,
+        PluginStep step,
+        CancellationToken cancellationToken)
+    {
+        var filtering = step.FilteringAttributes is { Length: > 0 } attributes
+            ? string.Join(",", attributes)
+            : null;
+
+        var matches = registered.GetAttributeValue<OptionSetValue>("stage")?.Value == (int)step.Stage
+            && registered.GetAttributeValue<OptionSetValue>("mode")?.Value == (int)step.Mode
+            && string.Equals(
+                registered.GetAttributeValue<string>("filteringattributes"),
+                filtering,
+                StringComparison.Ordinal);
+
+        if (matches)
+        {
+            ProvisioningLog.StepExists(logger, step.Name);
+
+            return;
+        }
+
+        await client.UpdateAsync(
+            new Entity("sdkmessageprocessingstep", registered.Id)
+            {
+                ["stage"] = new OptionSetValue((int)step.Stage),
+                ["mode"] = new OptionSetValue((int)step.Mode),
+                ["filteringattributes"] = filtering
+            },
+            cancellationToken).ConfigureAwait(false);
+
+        ProvisioningLog.StepCorrected(logger, step.Name, step.Stage, step.Mode);
+    }
+
+    private async Task<Entity?> FindStepAsync(string name, CancellationToken cancellationToken)
+    {
+        var query = new QueryExpression("sdkmessageprocessingstep")
+        {
+            ColumnSet = new ColumnSet("stage", "mode", "filteringattributes"),
+            Criteria = new FilterExpression
+            {
+                Conditions = { new ConditionExpression("name", ConditionOperator.Equal, name) }
+            },
+            TopCount = 1
+        };
+
+        var found = await client.RetrieveMultipleAsync(query, cancellationToken).ConfigureAwait(false);
+
+        return found.Entities.Count is 0 ? null : found.Entities[0];
     }
 
     private async Task<Guid?> FindAsync(

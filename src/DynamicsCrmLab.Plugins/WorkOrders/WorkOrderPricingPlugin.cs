@@ -51,38 +51,66 @@ public sealed class WorkOrderPricingPlugin() : PluginBase(nameof(WorkOrderPricin
             return;
         }
 
-        var workOrderId = WorkOrderIdOf(context);
-        if (workOrderId is null)
+        var workOrderIds = WorkOrderIdsOf(context);
+        if (workOrderIds.Count == 0)
         {
             context.Tracing.Trace("{0}: the line belongs to no job, nothing to total", PluginName);
 
             return;
         }
 
-        var lines = ReadLines(context, workOrderId.Value);
+        foreach (var workOrderId in workOrderIds)
+        {
+            Retotal(context, workOrderId);
+        }
+    }
+
+    private void Retotal(PluginContext context, Guid workOrderId)
+    {
+        var lines = ReadLines(context, workOrderId);
         var total = TotalOf(lines);
 
-        context.Tracing.Trace("{0}: {1} line(s), total {2}", PluginName, lines.Count, total);
+        context.Tracing.Trace(
+            "{0}: job {1}, {2} line(s), total {3}",
+            PluginName,
+            workOrderId,
+            lines.Count,
+            total);
 
-        context.Service.Update(new Entity(WorkOrderSchema.EntityName, workOrderId.Value)
+        context.Service.Update(new Entity(WorkOrderSchema.EntityName, workOrderId)
         {
             [WorkOrderSchema.TotalPrice] = new XrmMoney(total.Amount)
         });
     }
 
     /// <summary>
-    /// Finds the job the changed line belongs to.
+    /// Finds the jobs whose total the change affects.
     /// </summary>
     /// <remarks>
     /// An update carries only the columns that changed and a delete carries no
     /// columns at all, so the pre image is what answers this in both cases.
+    ///
+    /// Usually that is one job. Moving a line to another job is the exception:
+    /// the target carries where it went and the image where it came from, and
+    /// both totals have changed. Taking only one of them would leave the job it
+    /// left still charging for it.
     /// </remarks>
-    private static Guid? WorkOrderIdOf(PluginContext context)
+    private static List<Guid> WorkOrderIdsOf(PluginContext context)
     {
         var fromTarget = context.Target?.GetAttributeValue<EntityReference>(WorkOrderLineSchema.WorkOrder);
         var fromImage = context.PreImage()?.GetAttributeValue<EntityReference>(WorkOrderLineSchema.WorkOrder);
 
-        return (fromTarget ?? fromImage)?.Id;
+        var affected = new List<Guid>();
+
+        foreach (var reference in new[] { fromTarget, fromImage })
+        {
+            if (reference != null && !affected.Contains(reference.Id))
+            {
+                affected.Add(reference.Id);
+            }
+        }
+
+        return affected;
     }
 
     private static DomainMoney TotalOf(IReadOnlyCollection<WorkOrderLine> lines)
