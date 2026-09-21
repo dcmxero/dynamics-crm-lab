@@ -49,6 +49,7 @@ internal sealed record WorkOrderLineResponse(
 /// <param name="CustomerId">The customer the job is billed to.</param>
 /// <param name="EquipmentId">The equipment the job concerns.</param>
 /// <param name="TechnicianId">The technician responsible, if any.</param>
+/// <param name="TechnicianName">The name of that technician, if any.</param>
 /// <param name="Status">The stage the job has reached.</param>
 /// <param name="Resolution">The account of the work, once it was closed.</param>
 /// <param name="TotalPrice">The amount to invoice.</param>
@@ -60,6 +61,7 @@ internal sealed record WorkOrderResponse(
     Guid CustomerId,
     Guid EquipmentId,
     Guid? TechnicianId,
+    string? TechnicianName,
     string Status,
     string? Resolution,
     decimal TotalPrice,
@@ -169,6 +171,7 @@ internal static class WorkOrderMapping
             view.CustomerId,
             view.EquipmentId,
             view.TechnicianId,
+            view.TechnicianName,
             view.Status.ToString(),
             view.Resolution,
             view.TotalPrice.Amount,
