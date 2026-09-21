@@ -126,6 +126,31 @@ public sealed class WorkOrderEndpointsTests(WorkOrderApiFactoryFixture fixture)
         workOrder.Status.Should().Be(WorkOrderStatus.Assigned);
     }
 
+    [Fact]
+    public async Task Raise_ReturnsNotFoundWhenTheCustomerIsUnknown()
+    {
+        var response = await _client.PostAsJsonAsync("/api/work-orders", new
+        {
+            customerId = Guid.NewGuid(),
+            equipmentId = Guid.NewGuid(),
+            lines = new[] { new { description = "Technician labour", quantity = 1, unitPrice = 45m } }
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task Assign_ReturnsNotFoundWhenTheTechnicianIsUnknown()
+    {
+        var workOrder = StoredWorkOrder();
+
+        var response = await _client.PostAsJsonAsync(
+            $"/api/work-orders/{workOrder.Id}/assignment",
+            new { technicianId = Guid.NewGuid() });
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
     private WorkOrder StoredWorkOrder()
     {
         var customer = _factory.Store.AddCustomer();

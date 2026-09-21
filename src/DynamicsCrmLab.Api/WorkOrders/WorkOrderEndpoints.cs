@@ -77,9 +77,7 @@ internal static class WorkOrderEndpoints
     {
         var result = await handler.HandleAsync(id, cancellationToken).ConfigureAwait(false);
 
-        return result.IsSuccess
-            ? TypedResults.Ok(result.Value!.ToResponse())
-            : NotFound(result.Error);
+        return Translate(result, view => view.ToResponse());
     }
 
     private static async Task<IResult> RaiseAsync(
@@ -96,7 +94,7 @@ internal static class WorkOrderEndpoints
 
         if (!result.IsSuccess)
         {
-            return UnprocessableEntity(result.Error);
+            return Failed(result.Failure, result.Error);
         }
 
         var raised = result.Value!;
@@ -141,12 +139,12 @@ internal static class WorkOrderEndpoints
     private static IResult Translate<TValue, TResponse>(
         Result<TValue> result,
         Func<TValue, TResponse> toResponse) =>
-        result switch
-        {
-            { IsSuccess: true } => TypedResults.Ok(toResponse(result.Value!)),
-            { Error: { } error } when error.Contains("does not exist", StringComparison.Ordinal) => NotFound(error),
-            _ => UnprocessableEntity(result.Error)
-        };
+        result.IsSuccess
+            ? TypedResults.Ok(toResponse(result.Value!))
+            : Failed(result.Failure, result.Error);
+
+    private static ProblemHttpResult Failed(ResultFailure? failure, string? detail) =>
+        failure is ResultFailure.NotFound ? NotFound(detail) : UnprocessableEntity(detail);
 
     private static ProblemHttpResult NotFound(string? detail) =>
         TypedResults.Problem(

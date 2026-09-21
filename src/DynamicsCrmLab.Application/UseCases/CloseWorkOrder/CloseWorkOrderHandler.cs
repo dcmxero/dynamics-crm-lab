@@ -47,7 +47,7 @@ public sealed class CloseWorkOrderHandler(
         var workOrder = await workOrders.GetByIdAsync(command.WorkOrderId, cancellationToken).ConfigureAwait(false);
         if (workOrder is null)
         {
-            return Result.Failure<CloseWorkOrderResult>($"Work order {command.WorkOrderId} does not exist.");
+            return Result.NotFound<CloseWorkOrderResult>($"Work order {command.WorkOrderId} does not exist.");
         }
 
         try
@@ -56,7 +56,7 @@ public sealed class CloseWorkOrderHandler(
         }
         catch (DomainException exception)
         {
-            return Result.Failure<CloseWorkOrderResult>(exception.Message);
+            return Result.RuleBroken<CloseWorkOrderResult>(exception.Message);
         }
 
         await workOrders.UpdateAsync(workOrder, cancellationToken).ConfigureAwait(false);

@@ -54,15 +54,15 @@ public sealed class AssignWorkOrderHandler(
         var workOrder = await workOrders.GetByIdAsync(command.WorkOrderId, cancellationToken).ConfigureAwait(false);
         if (workOrder is null)
         {
-            return Result.Failure<AssignWorkOrderResult>($"Work order {command.WorkOrderId} does not exist.");
+            return Result.NotFound<AssignWorkOrderResult>($"Work order {command.WorkOrderId} does not exist.");
         }
 
         var technician = await ResolveTechnicianAsync(command.TechnicianId, cancellationToken).ConfigureAwait(false);
         if (technician is null)
         {
-            return Result.Failure<AssignWorkOrderResult>(command.TechnicianId is null
-                ? "No technician is available."
-                : $"Technician {command.TechnicianId} does not exist.");
+            return command.TechnicianId is null
+                ? Result.RuleBroken<AssignWorkOrderResult>("No technician is available.")
+                : Result.NotFound<AssignWorkOrderResult>($"Technician {command.TechnicianId} does not exist.");
         }
 
         try
@@ -71,7 +71,7 @@ public sealed class AssignWorkOrderHandler(
         }
         catch (DomainException exception)
         {
-            return Result.Failure<AssignWorkOrderResult>(exception.Message);
+            return Result.RuleBroken<AssignWorkOrderResult>(exception.Message);
         }
 
         await workOrders.UpdateAsync(workOrder, cancellationToken).ConfigureAwait(false);
