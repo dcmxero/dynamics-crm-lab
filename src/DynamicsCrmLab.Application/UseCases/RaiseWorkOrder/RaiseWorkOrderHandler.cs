@@ -50,6 +50,18 @@ public sealed class RaiseWorkOrderHandler(
             return Result.NotFound<RaiseWorkOrderResult>($"Equipment {command.EquipmentId} does not exist.");
         }
 
+        // A job is billed to a customer and carried out on their equipment. A unit
+        // belonging to somebody else would invoice one customer for work on
+        // another customer's property, which no later step would catch.
+        if (unit.CustomerId != customer.Id)
+        {
+            var mismatch = $"Equipment {unit.SerialNumber} does not belong to {customer.Name}.";
+
+            ApplicationLog.WorkOrderRejected(logger, command.CustomerId, mismatch);
+
+            return Result.RuleBroken<RaiseWorkOrderResult>(mismatch);
+        }
+
         WorkOrder workOrder;
         try
         {
