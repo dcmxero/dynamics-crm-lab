@@ -1,5 +1,6 @@
 using DynamicsCrmLab.Infrastructure.Dataverse;
 using Microsoft.Xrm.Sdk;
+using Microsoft.Xrm.Sdk.Messages;
 using Microsoft.Xrm.Sdk.Query;
 
 namespace DynamicsCrmLab.Infrastructure.Tests.Dataverse;
@@ -16,6 +17,8 @@ internal sealed class FakeDataverseClient : IDataverseClient
     public List<Entity> Updated { get; } = [];
 
     public List<(string EntityName, Guid Id)> Deleted { get; } = [];
+
+    public List<OrganizationRequest> Executed { get; } = [];
 
     public List<QueryExpression> Queries { get; } = [];
 
@@ -100,8 +103,22 @@ internal sealed class FakeDataverseClient : IDataverseClient
 
     public Task<OrganizationResponse> ExecuteAsync(
         OrganizationRequest request,
-        CancellationToken cancellationToken = default) =>
-        Task.FromResult(new OrganizationResponse());
+        CancellationToken cancellationToken = default)
+    {
+        Executed.Add(request);
+
+        // A transaction is a batch of ordinary requests, so what it carries is
+        // recorded as though each had been sent on its own.
+        if (request is ExecuteTransactionRequest transaction)
+        {
+            foreach (var inner in transaction.Requests.OfType<CreateRequest>())
+            {
+                Created.Add(inner.Target);
+            }
+        }
+
+        return Task.FromResult<OrganizationResponse>(new ExecuteTransactionResponse());
+    }
 
     public Task DeleteAsync(string entityName, Guid id, CancellationToken cancellationToken = default)
     {

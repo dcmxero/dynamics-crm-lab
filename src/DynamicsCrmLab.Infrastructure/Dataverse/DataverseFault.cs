@@ -29,4 +29,26 @@ public static class DataverseFault
     /// </returns>
     public static bool IsRecordNotFound(FaultException<OrganizationServiceFault>? exception) =>
         exception?.Detail?.ErrorCode == ObjectDoesNotExist;
+
+    /// <summary>
+    /// Reports whether a fault says the platform refused a value.
+    /// </summary>
+    /// <remarks>
+    /// A value outside the range a column allows, or a rule a plug-in enforces,
+    /// is the platform answering the request rather than failing at it. The
+    /// message it carries is written for a person, so it travels with it.
+    /// </remarks>
+    /// <param name="exception">The fault the platform raised.</param>
+    /// <returns>
+    /// <see langword="true"/> when the platform refused the request; otherwise
+    /// <see langword="false"/>.
+    /// </returns>
+    public static bool IsRefused(FaultException<OrganizationServiceFault>? exception) =>
+        exception?.Detail?.ErrorCode is ValueOutOfRange or BusinessRuleRefused;
+
+    /// <summary>The code the platform returns for a value a column will not hold.</summary>
+    private const int ValueOutOfRange = unchecked((int)0x8004432F);
+
+    /// <summary>The code a plug-in raising a rule of its own comes back as.</summary>
+    private const int BusinessRuleRefused = unchecked((int)0x80040265);
 }

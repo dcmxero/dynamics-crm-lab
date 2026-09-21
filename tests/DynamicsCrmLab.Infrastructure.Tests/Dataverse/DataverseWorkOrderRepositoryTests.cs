@@ -4,6 +4,7 @@ using DynamicsCrmLab.Infrastructure.Dataverse.Repositories;
 using DynamicsCrmLab.Schema;
 using FluentAssertions;
 using Microsoft.Xrm.Sdk;
+using Microsoft.Xrm.Sdk.Messages;
 using Xunit;
 using DomainMoney = DynamicsCrmLab.Domain.Common.Money;
 
@@ -50,6 +51,9 @@ public sealed class DataverseWorkOrderRepositoryTests
 
         await _repository.AddAsync(workOrder);
 
+        // One request, not three: a job and its charges are written together or
+        // not at all.
+        _client.Executed.Should().ContainSingle().Which.Should().BeOfType<ExecuteTransactionRequest>();
         _client.Created.Should().HaveCount(3);
         _client.Created[0].LogicalName.Should().Be(WorkOrderSchema.EntityName);
         _client.Created.Skip(1).Should().OnlyContain(e => e.LogicalName == WorkOrderLineSchema.EntityName);

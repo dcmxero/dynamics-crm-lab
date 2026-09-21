@@ -3,6 +3,7 @@ using DynamicsCrmLab.Domain.WorkOrders;
 using DynamicsCrmLab.Infrastructure.Dataverse.Mapping;
 using DynamicsCrmLab.Schema;
 using Microsoft.Xrm.Sdk;
+using Microsoft.Xrm.Sdk.Messages;
 using Microsoft.Xrm.Sdk.Query;
 
 namespace DynamicsCrmLab.Infrastructure.Dataverse.Repositories;
@@ -31,18 +32,28 @@ public sealed class DataverseWorkOrderRepository(IDataverseClient client, Datave
 
         var (currencyId, _) = await currencies.BaseAsync(cancellationToken).ConfigureAwait(false);
 
-        var id = await client
-            .CreateAsync(WorkOrderMapper.ToRecord(workOrder, currencyId), cancellationToken)
-            .ConfigureAwait(false);
+        // A job and its charges are one thing. Created one request at a time, a
+        // charge the platform refuses - a description past the length of the
+        // column, a quantity past its limit - would leave a job standing that
+        // is missing what it costs, and a plug-in would have totalled it.
+        var writes = new OrganizationRequestCollection
+        {
+            new CreateRequest { Target = WorkOrderMapper.ToRecord(workOrder, currencyId) }
+        };
 
         foreach (var line in workOrder.Lines)
         {
-            await client
-                .CreateAsync(WorkOrderMapper.ToLineRecord(line, id, currencyId), cancellationToken)
-                .ConfigureAwait(false);
+            writes.Add(new CreateRequest
+            {
+                Target = WorkOrderMapper.ToLineRecord(line, workOrder.Id, currencyId)
+            });
         }
 
-        return id;
+        await client.ExecuteAsync(
+            new ExecuteTransactionRequest { Requests = writes, ReturnResponses = false },
+            cancellationToken).ConfigureAwait(false);
+
+        return workOrder.Id;
     }
 
     /// <inheritdoc/>

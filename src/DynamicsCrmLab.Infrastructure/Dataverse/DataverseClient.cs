@@ -1,4 +1,5 @@
 using System.ServiceModel;
+using DynamicsCrmLab.Domain.Common;
 using Microsoft.Extensions.Options;
 using Microsoft.PowerPlatform.Dataverse.Client;
 using Microsoft.Xrm.Sdk;
@@ -22,7 +23,7 @@ public sealed class DataverseClient(IOptions<DataverseOptions> options) : IDatav
 
     /// <inheritdoc/>
     public Task<Guid> CreateAsync(Entity record, CancellationToken cancellationToken = default) =>
-        _client.Value.CreateAsync(record, cancellationToken);
+        Refusable(() => _client.Value.CreateAsync(record, cancellationToken));
 
     /// <inheritdoc/>
     public async Task<Entity?> RetrieveAsync(
@@ -55,7 +56,7 @@ public sealed class DataverseClient(IOptions<DataverseOptions> options) : IDatav
     public Task<OrganizationResponse> ExecuteAsync(
         OrganizationRequest request,
         CancellationToken cancellationToken = default) =>
-        _client.Value.ExecuteAsync(request, cancellationToken);
+        Refusable(() => _client.Value.ExecuteAsync(request, cancellationToken));
 
     /// <inheritdoc/>
     public Task DeleteAsync(string entityName, Guid id, CancellationToken cancellationToken = default) =>
@@ -63,7 +64,40 @@ public sealed class DataverseClient(IOptions<DataverseOptions> options) : IDatav
 
     /// <inheritdoc/>
     public Task UpdateAsync(Entity record, CancellationToken cancellationToken = default) =>
-        _client.Value.UpdateAsync(record, cancellationToken);
+        Refusable(() => _client.Value.UpdateAsync(record, cancellationToken));
+
+    /// <summary>
+    /// Runs a write and reports a refusal as the broken rule it is.
+    /// </summary>
+    /// <remarks>
+    /// A value a column will not hold, or a rule a plug-in enforces, is the
+    /// platform answering the request rather than failing at it, and the layers
+    /// above already know how to carry a broken rule back to the caller. They
+    /// do not know what a Dataverse fault is, and should not have to.
+    /// </remarks>
+    private static async Task<TResult> Refusable<TResult>(Func<Task<TResult>> write)
+    {
+        try
+        {
+            return await write().ConfigureAwait(false);
+        }
+        catch (FaultException<OrganizationServiceFault> fault) when (DataverseFault.IsRefused(fault))
+        {
+            throw new DomainException(fault.Detail.Message, fault);
+        }
+    }
+
+    private static async Task Refusable(Func<Task> write)
+    {
+        try
+        {
+            await write().ConfigureAwait(false);
+        }
+        catch (FaultException<OrganizationServiceFault> fault) when (DataverseFault.IsRefused(fault))
+        {
+            throw new DomainException(fault.Detail.Message, fault);
+        }
+    }
 
     /// <inheritdoc/>
     public void Dispose()
