@@ -12,6 +12,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="DynamicsCrmLab.Provisioning.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\DynamicsCrmLab.Infrastructure\DynamicsCrmLab.Infrastructure.csproj" />
   </ItemGroup>
 

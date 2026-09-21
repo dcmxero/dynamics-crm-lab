@@ -10,15 +10,15 @@ namespace DynamicsCrmLab.Provisioning;
 /// <remarks>
 /// Every label in Dataverse is a <see cref="Label"/> carrying a language code,
 /// and repeating that at each call site buries what is actually being declared.
+/// The code is supplied rather than fixed, because an environment rejects any
+/// language it was not provisioned for.
 /// </remarks>
-internal static class MetadataFactory
+/// <param name="languageCode">The locale identifier every label is written in.</param>
+internal sealed class MetadataFactory(int languageCode)
 {
-    /// <summary>English (United States), the language these environments start with.</summary>
-    private const int LanguageCode = 1033;
+    public Label Label(string text) => new(text, languageCode);
 
-    public static Label Label(string text) => new(text, LanguageCode);
-
-    public static StringAttributeMetadata Text(
+    public StringAttributeMetadata Text(
         string schemaName,
         string display,
         string description,
@@ -34,7 +34,7 @@ internal static class MetadataFactory
             RequiredLevel = Requirement(required)
         };
 
-    public static MemoAttributeMetadata Memo(string schemaName, string display, string description) =>
+    public MemoAttributeMetadata Memo(string schemaName, string display, string description) =>
         new()
         {
             SchemaName = schemaName,
@@ -44,7 +44,7 @@ internal static class MetadataFactory
             RequiredLevel = Requirement(required: false)
         };
 
-    public static IntegerAttributeMetadata Whole(
+    public IntegerAttributeMetadata Whole(
         string schemaName,
         string display,
         string description,
@@ -61,7 +61,7 @@ internal static class MetadataFactory
             RequiredLevel = Requirement(required)
         };
 
-    public static MoneyAttributeMetadata Currency(string schemaName, string display, string description) =>
+    public MoneyAttributeMetadata Currency(string schemaName, string display, string description) =>
         new()
         {
             SchemaName = schemaName,
@@ -71,7 +71,7 @@ internal static class MetadataFactory
             RequiredLevel = Requirement(required: false)
         };
 
-    public static BooleanAttributeMetadata YesNo(
+    public BooleanAttributeMetadata YesNo(
         string schemaName,
         string display,
         string description,
@@ -95,7 +95,7 @@ internal static class MetadataFactory
     /// The numbers have to match the domain enum, so they are stated here
     /// instead of letting the platform assign its own from the publisher range.
     /// </remarks>
-    public static PicklistAttributeMetadata Choice(
+    public PicklistAttributeMetadata Choice(
         string schemaName,
         string display,
         string description,
@@ -110,7 +110,7 @@ internal static class MetadataFactory
             DefaultFormValue = defaultValue
         };
 
-    public static EntityMetadata Table(
+    public EntityMetadata Table(
         string schemaName,
         string display,
         string plural,

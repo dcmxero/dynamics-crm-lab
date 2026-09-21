@@ -13,6 +13,7 @@ builder.Logging.AddSimpleConsole(options => options.SingleLine = true);
 
 builder.Services.AddDataverse(builder.Configuration);
 builder.Services.AddScoped<SolutionProvisioner>();
+builder.Services.AddScoped<OrganizationLanguage>();
 builder.Services.AddScoped<SchemaProvisioner>();
 builder.Services.AddScoped<SampleDataSeeder>();
 
