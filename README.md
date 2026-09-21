@@ -221,6 +221,13 @@ Values that differ per environment - addresses, keys, switches - belong in
 environment variables rather than in the solution, and connections used by flows
 in connection references.
 
+Two things do not travel in the solution and have to exist in the target
+environment before anything works: an application user for the registration the
+tools sign in as, with a security role, and the data itself. A managed import
+carrying the tables, the plug-in package and its steps has been through a
+freshly created environment and the rules refuse there what they refuse at
+home, which is the point of shipping the rules with the schema.
+
 Two workflows cover this:
 
 | Workflow | Trigger | What it does |
