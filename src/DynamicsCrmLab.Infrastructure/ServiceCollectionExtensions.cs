@@ -2,6 +2,7 @@ using DynamicsCrmLab.Application.Abstractions;
 using DynamicsCrmLab.Application.UseCases.AssignWorkOrder;
 using DynamicsCrmLab.Application.UseCases.CloseWorkOrder;
 using DynamicsCrmLab.Application.UseCases.RaiseWorkOrder;
+using DynamicsCrmLab.Application.UseCases.StartWorkOrder;
 using DynamicsCrmLab.Application.UseCases.ViewWorkOrders;
 using DynamicsCrmLab.Infrastructure.Dataverse;
 using DynamicsCrmLab.Infrastructure.Dataverse.Repositories;
@@ -30,6 +31,7 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<RaiseWorkOrderHandler>();
         services.AddScoped<AssignWorkOrderHandler>();
+        services.AddScoped<StartWorkOrderHandler>();
         services.AddScoped<CloseWorkOrderHandler>();
         services.AddScoped<ListWorkOrdersHandler>();
         services.AddScoped<GetWorkOrderHandler>();

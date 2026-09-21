@@ -72,6 +72,15 @@
     >
       Assign a free technician
     </button>
+
+    <button
+      mat-stroked-button
+      type="button"
+      [disabled]="working() || order.status !== 'Assigned'"
+      (click)="start()"
+    >
+      Start the work
+    </button>
   </div>
 
   <form class="closure" [formGroup]="closure" (ngSubmit)="close()">

@@ -81,6 +81,10 @@ export class WorkOrderDetail {
     );
   }
 
+  protected start(): void {
+    this.run(this.workOrders.start(this.id()), (started) => `Work started on ${started.number}.`);
+  }
+
   protected close(): void {
     if (this.closure.invalid) {
       this.closure.markAllAsTouched();

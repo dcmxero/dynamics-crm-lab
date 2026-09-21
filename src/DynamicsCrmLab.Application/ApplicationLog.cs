@@ -31,6 +31,12 @@ internal static partial class ApplicationLog
     public static partial void WorkOrderAssigned(ILogger logger, string number, string technicianName);
 
     [LoggerMessage(
+        EventId = 1004,
+        Level = LogLevel.Information,
+        Message = "Work started on work order {Number}.")]
+    public static partial void WorkOrderStarted(ILogger logger, string number);
+
+    [LoggerMessage(
         EventId = 1003,
         Level = LogLevel.Information,
         Message = "Work order {Number} closed, {TotalPrice} to invoice.")]

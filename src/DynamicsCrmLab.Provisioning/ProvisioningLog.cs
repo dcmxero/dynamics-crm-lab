@@ -63,6 +63,9 @@ internal static partial class ProvisioningLog
         Message = "Created the alternate key on the work order number.")]
     public static partial void KeyCreated(ILogger logger);
 
+    [LoggerMessage(EventId = 2023, Level = LogLevel.Information, Message = "Turned activities on for {Table}.")]
+    public static partial void ActivitiesEnabled(ILogger logger, string table);
+
     [LoggerMessage(EventId = 2012, Level = LogLevel.Information, Message = "{Table} {Value} is already there.")]
     public static partial void RecordExists(ILogger logger, string table, string value);
 

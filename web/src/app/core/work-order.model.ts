@@ -71,6 +71,12 @@ export interface WorkOrderAssigned {
   readonly technicianName: string;
 }
 
+export interface WorkOrderStarted {
+  readonly id: string;
+  readonly number: string;
+  readonly status: WorkOrderStatus;
+}
+
 export interface WorkOrderClosed {
   readonly id: string;
   readonly number: string;

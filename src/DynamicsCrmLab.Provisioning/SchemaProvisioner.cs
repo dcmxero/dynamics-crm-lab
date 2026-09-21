@@ -99,7 +99,10 @@ internal sealed class SchemaProvisioner(
                 "dcl_WorkOrder",
                 "Work order",
                 "Work orders",
-                "A service job raised against customer equipment."),
+                "A service job raised against customer equipment.",
+                // The plug-in raises a follow-up task against a closed job, and
+                // a task can only regard a table that accepts activities.
+                hasActivities: true),
             metadata.Text(
                 "dcl_Number",
                 "Number",
@@ -107,6 +110,8 @@ internal sealed class SchemaProvisioner(
                 maxLength: 40,
                 required: true),
             cancellationToken).ConfigureAwait(false);
+
+        await EnsureActivitiesAsync(WorkOrderSchema.EntityName, cancellationToken).ConfigureAwait(false);
 
         await EnsureStatusAsync(metadata, cancellationToken).ConfigureAwait(false);
 
@@ -156,6 +161,37 @@ internal sealed class SchemaProvisioner(
             WorkOrderLineSchema.EntityName,
             metadata.Currency("dcl_UnitPrice", "Unit price", "The price of a single hour or unit."),
             cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Turns activities on for a table that was created without them.
+    /// </summary>
+    /// <remarks>
+    /// Tables created before the plug-in needed this are already in
+    /// environments, and the switch can be thrown afterwards, so it is brought
+    /// up to date rather than left to whoever created the table first.
+    /// </remarks>
+    private async Task EnsureActivitiesAsync(string logicalName, CancellationToken cancellationToken)
+    {
+        var table = await DescribeAsync(logicalName, cancellationToken).ConfigureAwait(false);
+
+        if (table is null || table.HasActivities == true)
+        {
+            return;
+        }
+
+        table.HasActivities = true;
+
+        await client.ExecuteAsync(
+            new UpdateEntityRequest
+            {
+                Entity = table,
+                HasActivities = true,
+                SolutionUniqueName = SolutionProvisioner.SolutionUniqueName
+            },
+            cancellationToken).ConfigureAwait(false);
+
+        ProvisioningLog.ActivitiesEnabled(logger, logicalName);
     }
 
     private async Task EnsureStatusAsync(MetadataFactory metadata, CancellationToken cancellationToken)

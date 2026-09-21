@@ -2,6 +2,7 @@ using DynamicsCrmLab.Application.Abstractions;
 using DynamicsCrmLab.Application.UseCases.AssignWorkOrder;
 using DynamicsCrmLab.Application.UseCases.CloseWorkOrder;
 using DynamicsCrmLab.Application.UseCases.RaiseWorkOrder;
+using DynamicsCrmLab.Application.UseCases.StartWorkOrder;
 using DynamicsCrmLab.Application.UseCases.ViewWorkOrders;
 using Microsoft.AspNetCore.Http.HttpResults;
 
@@ -41,6 +42,10 @@ internal static class WorkOrderEndpoints
         group.MapPost("/{id:guid}/assignment", AssignAsync)
             .WithName("AssignWorkOrder")
             .WithSummary("Puts a technician on a work order.");
+
+        group.MapPost("/{id:guid}/start", StartAsync)
+            .WithName("StartWorkOrder")
+            .WithSummary("Records that the technician has started on a work order.");
 
         group.MapPost("/{id:guid}/closure", CloseAsync)
             .WithName("CloseWorkOrder")
@@ -113,6 +118,18 @@ internal static class WorkOrderEndpoints
             .ConfigureAwait(false);
 
         return Translate(result, assigned => assigned.ToResponse());
+    }
+
+    private static async Task<IResult> StartAsync(
+        StartWorkOrderHandler handler,
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        var result = await handler
+            .HandleAsync(new StartWorkOrderCommand(id), cancellationToken)
+            .ConfigureAwait(false);
+
+        return Translate(result, started => started.ToResponse());
     }
 
     private static async Task<IResult> CloseAsync(

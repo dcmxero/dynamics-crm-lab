@@ -110,11 +110,25 @@ internal sealed class MetadataFactory(int languageCode)
             DefaultFormValue = defaultValue
         };
 
+    /// <summary>
+    /// Builds a table.
+    /// </summary>
+    /// <param name="schemaName">The schema name, carrying the publisher prefix.</param>
+    /// <param name="display">The name shown on a form.</param>
+    /// <param name="plural">The name shown above a list.</param>
+    /// <param name="description">What the table holds.</param>
+    /// <param name="hasActivities">
+    /// Whether tasks, emails and the rest can be raised against a row. Off
+    /// unless a row is something people work on, because it cannot be switched
+    /// back off once a row has activities.
+    /// </param>
+    /// <returns>The table metadata.</returns>
     public EntityMetadata Table(
         string schemaName,
         string display,
         string plural,
-        string description) =>
+        string description,
+        bool hasActivities = false) =>
         new()
         {
             SchemaName = schemaName,
@@ -124,7 +138,7 @@ internal sealed class MetadataFactory(int languageCode)
             OwnershipType = OwnershipTypes.UserOwned,
             IsActivity = false,
             HasNotes = false,
-            HasActivities = false
+            HasActivities = hasActivities
         };
 
     private static AttributeRequiredLevelManagedProperty Requirement(bool required) =>
