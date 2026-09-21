@@ -1,0 +1,11 @@
+# One line ending in the repository, whatever the machine. Without this the
+# working tree is CRLF on Windows while Prettier writes LF, and the formatting
+# check disagrees with itself depending on who runs it.
+* text=auto eol=lf
+
+*.sln text eol=crlf
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+*.snk binary
+*.nupkg binary
