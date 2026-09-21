@@ -6,6 +6,7 @@ import {
   WorkOrder,
   WorkOrderAssigned,
   WorkOrderClosed,
+  WorkOrderStarted,
   WorkOrderCreated,
   WorkOrderStatus,
   WorkOrderSummary,
@@ -40,6 +41,10 @@ export class WorkOrderService {
     return this.http.post<WorkOrderAssigned>(`${this.baseUrl}/${id}/assignment`, {
       technicianId,
     });
+  }
+
+  start(id: string): Observable<WorkOrderStarted> {
+    return this.http.post<WorkOrderStarted>(`${this.baseUrl}/${id}/start`, {});
   }
 
   close(id: string, resolution: string): Observable<WorkOrderClosed> {

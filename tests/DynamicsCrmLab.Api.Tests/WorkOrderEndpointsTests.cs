@@ -164,6 +164,38 @@ public sealed class WorkOrderEndpointsTests(WorkOrderApiFactoryFixture fixture)
         response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
     }
 
+    [Fact]
+    public async Task Start_TakesAnAssignedJobThroughToClosure()
+    {
+        var workOrder = StoredWorkOrder();
+        _factory.Store.AddTechnician();
+
+        await _client.PostAsJsonAsync(
+            $"/api/work-orders/{workOrder.Id}/assignment",
+            new { technicianId = (Guid?)null });
+
+        var started = await _client.PostAsJsonAsync($"/api/work-orders/{workOrder.Id}/start", new { });
+
+        started.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var closed = await _client.PostAsJsonAsync(
+            $"/api/work-orders/{workOrder.Id}/closure",
+            new { resolution = "Replaced the filter." });
+
+        closed.StatusCode.Should().Be(HttpStatusCode.OK);
+        workOrder.Status.Should().Be(WorkOrderStatus.Closed);
+    }
+
+    [Fact]
+    public async Task Start_RefusesAJobNobodyIsOn()
+    {
+        var workOrder = StoredWorkOrder();
+
+        var response = await _client.PostAsJsonAsync($"/api/work-orders/{workOrder.Id}/start", new { });
+
+        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+    }
+
     private WorkOrder StoredWorkOrder()
     {
         var customer = _factory.Store.AddCustomer();

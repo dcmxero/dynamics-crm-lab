@@ -1,6 +1,7 @@
 using DynamicsCrmLab.Application.UseCases.AssignWorkOrder;
 using DynamicsCrmLab.Application.UseCases.CloseWorkOrder;
 using DynamicsCrmLab.Application.UseCases.RaiseWorkOrder;
+using DynamicsCrmLab.Application.UseCases.StartWorkOrder;
 using DynamicsCrmLab.Application.UseCases.ViewWorkOrders;
 using DynamicsCrmLab.Domain.WorkOrders;
 
@@ -122,6 +123,14 @@ internal sealed record WorkOrderCreatedResponse(
 internal sealed record WorkOrderAssignedResponse(Guid Id, Guid TechnicianId, string TechnicianName);
 
 /// <summary>
+/// Represents a work order work has just started on.
+/// </summary>
+/// <param name="Id">The identifier of the job.</param>
+/// <param name="Number">The reference quoted to the customer.</param>
+/// <param name="Status">The stage the job has reached.</param>
+internal sealed record WorkOrderStartedResponse(Guid Id, string Number, string Status);
+
+/// <summary>
 /// Represents a work order that has just been closed.
 /// </summary>
 /// <param name="Id">The identifier of the job.</param>
@@ -180,6 +189,9 @@ internal static class WorkOrderMapping
 
     public static WorkOrderAssignedResponse ToResponse(this AssignWorkOrderResult assigned) =>
         new(assigned.WorkOrderId, assigned.TechnicianId, assigned.TechnicianName);
+
+    public static WorkOrderStartedResponse ToResponse(this StartWorkOrderResult started) =>
+        new(started.WorkOrderId, started.Number, started.Status.ToString());
 
     public static WorkOrderClosedResponse ToResponse(this CloseWorkOrderResult closed) =>
         new(closed.WorkOrderId, closed.Number, closed.TotalPrice.Amount, closed.TotalPrice.Currency);

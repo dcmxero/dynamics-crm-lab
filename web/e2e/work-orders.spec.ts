@@ -108,6 +108,34 @@ test('shows what the job refused rather than an error page', async ({ page }) =>
   await expect(page.getByText('Only an in-progress work order can be closed')).toBeVisible();
 });
 
+test('offers starting the work only once somebody is on the job', async ({ page }) => {
+  await stubDetail(page);
+
+  await page.goto(`/work-orders/${JOB_ID}`);
+
+  await expect(page.getByRole('button', { name: 'Start the work' })).toBeDisabled();
+});
+
+test('starts the work on an assigned job', async ({ page }) => {
+  await page.route(`**/api/work-orders/${JOB_ID}`, (route) =>
+    route.fulfill({
+      json: { ...detail, status: 'Assigned', technicianId: '55555555-5555-5555-5555-555555555555' },
+      status: 200,
+    }),
+  );
+  await page.route(`**/api/work-orders/${JOB_ID}/start`, (route) =>
+    route.fulfill({
+      json: { id: JOB_ID, number: summary.number, status: 'InProgress' },
+      status: 200,
+    }),
+  );
+
+  await page.goto(`/work-orders/${JOB_ID}`);
+  await page.getByRole('button', { name: 'Start the work' }).click();
+
+  await expect(page.getByText(`Work started on ${summary.number}.`)).toBeVisible();
+});
+
 test('keeps an empty resolution from being submitted', async ({ page }) => {
   await stubDetail(page);
 
