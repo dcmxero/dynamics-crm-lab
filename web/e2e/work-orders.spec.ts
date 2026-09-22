@@ -42,8 +42,14 @@ const detail = {
   ],
 };
 
-async function stubList(page: Page, jobs: unknown[]): Promise<void> {
-  await page.route('**/api/work-orders?*', (route) => route.fulfill({ json: jobs, status: 200 }));
+async function stubList(
+  page: Page,
+  jobs: unknown[],
+  nextCursor: string | null = null,
+): Promise<void> {
+  await page.route('**/api/work-orders?*', (route) =>
+    route.fulfill({ json: { items: jobs, nextCursor }, status: 200 }),
+  );
 }
 
 async function stubDetail(page: Page): Promise<void> {
@@ -59,6 +65,36 @@ test('lists the jobs that have reached a stage', async ({ page }) => {
 
   await expect(page.getByRole('heading', { name: 'Work orders' })).toBeVisible();
   await expect(page.getByRole('link', { name: summary.number })).toBeVisible();
+});
+
+test('reads the next page when there is one', async ({ page }) => {
+  const second = {
+    ...summary,
+    id: '4fa85f64-5717-4562-b3fc-2c963f66afa6',
+    number: 'WO-20260902-BBBBBB',
+  };
+
+  await page.route('**/api/work-orders?*', (route) => {
+    const asked = new URL(route.request().url()).searchParams.get('cursor');
+
+    return route.fulfill({
+      json: asked
+        ? { items: [second], nextCursor: null }
+        : { items: [summary], nextCursor: 'more' },
+      status: 200,
+    });
+  });
+
+  await page.goto('/work-orders');
+
+  await expect(page.getByRole('link', { name: summary.number })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Load more' }).click();
+
+  // The page that was already read stays; the next one is added to it.
+  await expect(page.getByRole('link', { name: summary.number })).toBeVisible();
+  await expect(page.getByRole('link', { name: second.number })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Load more' })).toBeHidden();
 });
 
 test('says so when nothing has reached the stage', async ({ page }) => {

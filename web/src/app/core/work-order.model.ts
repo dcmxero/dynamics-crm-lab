@@ -34,6 +34,16 @@ export interface WorkOrderLine {
   readonly lineTotal: number;
 }
 
+/**
+ * One page of results and where the next one starts.
+ *
+ * `nextCursor` is opaque: it is passed back as given, never assembled here.
+ */
+export interface WorkOrderPage {
+  readonly items: readonly WorkOrderSummary[];
+  readonly nextCursor: string | null;
+}
+
 export interface WorkOrder {
   readonly id: string;
   readonly number: string;

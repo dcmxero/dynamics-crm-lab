@@ -48,6 +48,12 @@ exception - it is an ordinary answer to the request, not a program failure.
 | `StartWorkOrder` | records that the technician has started on it |
 | `CloseWorkOrder` | finishes it and records what was done |
 
+A listing answers with a page and a cursor rather than a bare array. The cursor
+is opaque: it carries the paging cookie the platform issues, so a caller cannot
+assemble one, and a stale one starts the listing again rather than failing. A
+page number and a row count to skip would read a row twice, or miss one, as soon
+as a job is raised between two requests.
+
 ## Dataverse
 
 Tables carry the `dcl_` publisher prefix: `dcl_workorder`, `dcl_workorderline`,
@@ -115,10 +121,11 @@ dotnet run        # OpenAPI document at /openapi/v1.json
 
 | Route | Purpose |
 |---|---|
-| `GET /api/work-orders?status=&take=` | jobs that have reached a stage |
+| `GET /api/work-orders?status=&take=&cursor=` | one page of jobs that have reached a stage |
 | `GET /api/work-orders/{id}` | one job in full |
 | `POST /api/work-orders` | raise a job |
 | `POST /api/work-orders/{id}/assignment` | put a technician on it |
+| `POST /api/work-orders/{id}/start` | record that work has begun |
 | `POST /api/work-orders/{id}/closure` | finish it |
 
 Failures come back as problem details. A missing record is 404; a request that
@@ -272,6 +279,7 @@ dotnet user-secrets set "Dataverse:Url" "https://your-org.crm4.dynamics.com"
 dotnet run -- whoami
 dotnet run -- raise <customerId> <equipmentId> "Technician labour" 2 45
 dotnet run -- assign <workOrderId>
+dotnet run -- start <workOrderId>
 dotnet run -- close <workOrderId> "Replaced the compressor seal."
 ```
 

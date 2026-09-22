@@ -35,20 +35,25 @@ public sealed class ListWorkOrdersHandler(IWorkOrderRepository workOrders)
     /// </summary>
     /// <param name="status">The stage to filter by.</param>
     /// <param name="maxCount">The largest number of jobs to return.</param>
+    /// <param name="cursor">
+    /// Where to carry on from, as handed out by a previous page, or
+    /// <see langword="null"/> to start at the beginning.
+    /// </param>
     /// <param name="cancellationToken">Cancels the operation.</param>
-    /// <returns>The matching jobs, most recently raised first.</returns>
-    public async Task<IReadOnlyList<WorkOrderSummary>> HandleAsync(
+    /// <returns>One page of matching jobs, most recently raised first.</returns>
+    public async Task<Page<WorkOrderSummary>> HandleAsync(
         WorkOrderStatus status,
         int maxCount = 50,
+        string? cursor = null,
         CancellationToken cancellationToken = default)
     {
         var capped = Math.Clamp(maxCount, 1, MaxPageSize);
 
         var found = await workOrders
-            .ListByStatusAsync(status, capped, cancellationToken)
+            .ListByStatusAsync(status, capped, cursor, cancellationToken)
             .ConfigureAwait(false);
 
-        return [.. found.Select(Summarise)];
+        return new Page<WorkOrderSummary>([.. found.Items.Select(Summarise)], found.NextCursor);
     }
 
     private static WorkOrderSummary Summarise(WorkOrder workOrder) =>

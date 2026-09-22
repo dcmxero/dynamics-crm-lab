@@ -37,14 +37,19 @@ public interface IWorkOrderRepository
     Task UpdateAsync(WorkOrder workOrder, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Lists work orders in a given stage, most recently raised first.
+    /// Lists one page of work orders in a given stage, most recently raised first.
     /// </summary>
     /// <param name="status">The stage to filter by.</param>
     /// <param name="maxCount">The largest number of records to return.</param>
+    /// <param name="cursor">
+    /// Where to carry on from, as handed out by a previous page, or
+    /// <see langword="null"/> to start at the beginning.
+    /// </param>
     /// <param name="cancellationToken">Cancels the operation.</param>
-    /// <returns>The matching work orders.</returns>
-    Task<IReadOnlyList<WorkOrder>> ListByStatusAsync(
+    /// <returns>The matching work orders and where the next page starts.</returns>
+    Task<Page<WorkOrder>> ListByStatusAsync(
         WorkOrderStatus status,
         int maxCount,
+        string? cursor = null,
         CancellationToken cancellationToken = default);
 }

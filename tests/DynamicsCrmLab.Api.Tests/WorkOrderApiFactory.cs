@@ -1,3 +1,4 @@
+using System.Globalization;
 using DynamicsCrmLab.Application.Abstractions;
 using DynamicsCrmLab.Domain.Customers;
 using DynamicsCrmLab.Domain.Equipments;
@@ -88,15 +89,24 @@ internal sealed class InMemoryStore
         return Task.CompletedTask;
     }
 
-    Task<IReadOnlyList<WorkOrder>> IWorkOrderRepository.ListByStatusAsync(
+    Task<Page<WorkOrder>> IWorkOrderRepository.ListByStatusAsync(
         WorkOrderStatus status,
         int maxCount,
+        string? cursor,
         CancellationToken cancellationToken)
     {
-        IReadOnlyList<WorkOrder> matching =
-            [.. _workOrders.Values.Where(order => order.Status == status).Take(maxCount)];
+        // The cursor is the count already handed out, which is all a list in
+        // memory needs to carry on from.
+        var alreadyRead = int.TryParse(cursor, out var parsed) ? parsed : 0;
 
-        return Task.FromResult(matching);
+        var matching = _workOrders.Values.Where(order => order.Status == status).ToList();
+        IReadOnlyList<WorkOrder> page = [.. matching.Skip(alreadyRead).Take(maxCount)];
+
+        var next = alreadyRead + page.Count < matching.Count
+            ? (alreadyRead + page.Count).ToString(CultureInfo.InvariantCulture)
+            : null;
+
+        return Task.FromResult(new Page<WorkOrder>(page, next));
     }
 
     Task<Customer?> ICustomerRepository.GetByIdAsync(Guid id, CancellationToken cancellationToken) =>
