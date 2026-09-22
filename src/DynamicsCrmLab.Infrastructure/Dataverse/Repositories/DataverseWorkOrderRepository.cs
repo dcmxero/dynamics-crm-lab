@@ -87,11 +87,14 @@ public sealed class DataverseWorkOrderRepository(IDataverseClient client, Datave
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyList<WorkOrder>> ListByStatusAsync(
+    public async Task<Page<WorkOrder>> ListByStatusAsync(
         WorkOrderStatus status,
         int maxCount,
+        string? cursor = null,
         CancellationToken cancellationToken = default)
     {
+        var resuming = Cursor.Read(cursor);
+
         var query = new QueryExpression(WorkOrderSchema.EntityName)
         {
             ColumnSet = new ColumnSet([.. WorkOrderSchema.ReadColumns]),
@@ -100,30 +103,20 @@ public sealed class DataverseWorkOrderRepository(IDataverseClient client, Datave
                 Conditions = { new ConditionExpression(WorkOrderSchema.Status, ConditionOperator.Equal, (int)status) }
             },
             Orders = { new OrderExpression("createdon", OrderType.Descending) },
-            PageInfo = new PagingInfo { Count = Math.Min(maxCount, MaxPageSize), PageNumber = 1 }
+            PageInfo = new PagingInfo
+            {
+                Count = Math.Min(maxCount, MaxPageSize),
+                PageNumber = resuming.PageNumber,
+
+                // Without the cookie Dataverse restarts the scan, which silently
+                // returns duplicates and skips rows on large result sets.
+                PagingCookie = resuming.Cookie
+            }
         };
 
-        var records = new List<Entity>();
+        var page = await client.RetrieveMultipleAsync(query, cancellationToken).ConfigureAwait(false);
 
-        while (records.Count < maxCount)
-        {
-            var page = await client.RetrieveMultipleAsync(query, cancellationToken).ConfigureAwait(false);
-
-            records.AddRange(page.Entities);
-
-            if (!page.MoreRecords)
-            {
-                break;
-            }
-
-            query.PageInfo.PageNumber++;
-
-            // Without the cookie Dataverse restarts the scan, which silently
-            // returns duplicates and skips rows on large result sets.
-            query.PageInfo.PagingCookie = page.PagingCookie;
-        }
-
-        var wanted = records.Take(maxCount).ToList();
+        var wanted = page.Entities.Take(maxCount).ToList();
 
         // One query for every line of every job on the page, rather than one
         // query per job. The latter costs a round trip per row and runs into
@@ -144,7 +137,11 @@ public sealed class DataverseWorkOrderRepository(IDataverseClient client, Datave
                 currency));
         }
 
-        return restored;
+        var next = page.MoreRecords
+            ? Cursor.Write(resuming.PageNumber + 1, page.PagingCookie)
+            : null;
+
+        return new Page<WorkOrder>(restored, next);
     }
 
     /// <summary>

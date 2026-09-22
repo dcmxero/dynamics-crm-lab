@@ -51,4 +51,10 @@
     <tr mat-header-row *matHeaderRowDef="columns"></tr>
     <tr mat-row *matRowDef="let row; columns: columns"></tr>
   </table>
+
+  @if (nextCursor()) {
+    <button mat-stroked-button class="load-more" [disabled]="loading()" (click)="loadMore()">
+      Load more
+    </button>
+  }
 }

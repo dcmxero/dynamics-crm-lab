@@ -29,7 +29,7 @@ internal static class WorkOrderEndpoints
 
         group.MapGet("/", ListAsync)
             .WithName("ListWorkOrders")
-            .WithSummary("Lists work orders that have reached a given stage.");
+            .WithSummary("Lists one page of work orders that have reached a given stage.");
 
         group.MapGet("/{id:guid}", GetAsync)
             .WithName("GetWorkOrder")
@@ -58,6 +58,7 @@ internal static class WorkOrderEndpoints
         ListWorkOrdersHandler handler,
         string? status,
         int? take,
+        string? cursor,
         CancellationToken cancellationToken)
     {
         if (!WorkOrderMapping.TryParseStatus(status ?? "New", out var parsed))
@@ -69,10 +70,12 @@ internal static class WorkOrderEndpoints
         }
 
         var found = await handler
-            .HandleAsync(parsed, take ?? 50, cancellationToken)
+            .HandleAsync(parsed, take ?? 50, cursor, cancellationToken)
             .ConfigureAwait(false);
 
-        return TypedResults.Ok(found.Select(summary => summary.ToResponse()).ToList());
+        return TypedResults.Ok(new WorkOrderPageResponse(
+            [.. found.Items.Select(summary => summary.ToResponse())],
+            found.NextCursor));
     }
 
     private static async Task<IResult> GetAsync(

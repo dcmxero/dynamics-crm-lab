@@ -1,3 +1,4 @@
+using System.Globalization;
 using DynamicsCrmLab.Application.Abstractions;
 using DynamicsCrmLab.Domain.WorkOrders;
 
@@ -24,13 +25,23 @@ internal sealed class InMemoryWorkOrderRepository : IWorkOrderRepository
         return Task.CompletedTask;
     }
 
-    public Task<IReadOnlyList<WorkOrder>> ListByStatusAsync(
+    public Task<Page<WorkOrder>> ListByStatusAsync(
         WorkOrderStatus status,
         int maxCount,
+        string? cursor = null,
         CancellationToken cancellationToken = default)
     {
-        IReadOnlyList<WorkOrder> matching = [.. _stored.Values.Where(o => o.Status == status).Take(maxCount)];
+        // The cursor is the count already handed out, which is all a list in
+        // memory needs to carry on from.
+        var alreadyRead = int.TryParse(cursor, out var parsed) ? parsed : 0;
 
-        return Task.FromResult(matching);
+        var matching = _stored.Values.Where(o => o.Status == status).ToList();
+        IReadOnlyList<WorkOrder> page = [.. matching.Skip(alreadyRead).Take(maxCount)];
+
+        var next = alreadyRead + page.Count < matching.Count
+            ? (alreadyRead + page.Count).ToString(CultureInfo.InvariantCulture)
+            : null;
+
+        return Task.FromResult(new Page<WorkOrder>(page, next));
     }
 }

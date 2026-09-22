@@ -90,7 +90,38 @@ public sealed class WorkOrderEndpointsTests(WorkOrderApiFactoryFixture fixture)
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var body = await response.Content.ReadFromJsonAsync<JsonElement>();
-        body.GetArrayLength().Should().BeGreaterThan(0);
+        body.GetProperty("items").GetArrayLength().Should().BeGreaterThan(0);
+    }
+
+    [Fact]
+    public async Task List_HandsOutACursorWhileThereIsMoreToRead()
+    {
+        StoredWorkOrder();
+        StoredWorkOrder();
+        StoredWorkOrder();
+
+        var first = await _client.GetFromJsonAsync<JsonElement>("/api/work-orders?status=New&take=1");
+
+        var cursor = first.GetProperty("nextCursor").GetString();
+        cursor.Should().NotBeNullOrEmpty();
+
+        var second = await _client.GetFromJsonAsync<JsonElement>(
+            $"/api/work-orders?status=New&take=1&cursor={cursor}");
+
+        var firstId = first.GetProperty("items")[0].GetProperty("id").GetString();
+        var secondId = second.GetProperty("items")[0].GetProperty("id").GetString();
+
+        secondId.Should().NotBe(firstId);
+    }
+
+    [Fact]
+    public async Task List_OffersNoCursorOnceTheJobsRunOut()
+    {
+        StoredWorkOrder();
+
+        var page = await _client.GetFromJsonAsync<JsonElement>("/api/work-orders?status=New&take=200");
+
+        page.GetProperty("nextCursor").ValueKind.Should().Be(JsonValueKind.Null);
     }
 
     [Fact]

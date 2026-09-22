@@ -95,7 +95,7 @@ public sealed class DataverseWorkOrderRepositoryTests
 
         var found = await _repository.ListByStatusAsync(WorkOrderStatus.New, maxCount: 10);
 
-        found.Should().ContainSingle();
+        found.Items.Should().ContainSingle();
         _client.Queries[0].EntityName.Should().Be(WorkOrderSchema.EntityName);
     }
 
@@ -126,7 +126,11 @@ public sealed class DataverseWorkOrderRepositoryTests
         _client.EnqueuePage(WorkOrderSchema.EntityName, PageOf(rows: 1, moreRecords: true));
         _client.EnqueuePage(WorkOrderSchema.EntityName, PageOf(rows: 1, moreRecords: false));
 
-        await _repository.ListByStatusAsync(WorkOrderStatus.New, maxCount: 10);
+        var first = await _repository.ListByStatusAsync(WorkOrderStatus.New, maxCount: 10);
+
+        first.NextCursor.Should().NotBeNull();
+
+        await _repository.ListByStatusAsync(WorkOrderStatus.New, maxCount: 10, first.NextCursor);
 
         var pageQueries = _client.Queries
             .Where(q => q.EntityName == WorkOrderSchema.EntityName)
@@ -135,6 +139,29 @@ public sealed class DataverseWorkOrderRepositoryTests
         pageQueries.Should().HaveCountGreaterThan(1);
         pageQueries[1].PageInfo.PageNumber.Should().Be(2);
         pageQueries[1].PageInfo.PagingCookie.Should().Be("<cookie page=\"1\" />");
+    }
+
+    [Fact]
+    public async Task ListByStatusAsync_OffersNoCursorOnTheLastPage()
+    {
+        _client.EnqueuePage(WorkOrderSchema.EntityName, PageOf(rows: 2, moreRecords: false));
+
+        var found = await _repository.ListByStatusAsync(WorkOrderStatus.New, maxCount: 10);
+
+        found.NextCursor.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task ListByStatusAsync_StartsAgainWhenHandedACursorItCannotRead()
+    {
+        _client.EnqueuePage(WorkOrderSchema.EntityName, PageOf(rows: 1, moreRecords: false));
+
+        // A stale or mangled token is not a broken request, and the first page
+        // is a truthful answer to it.
+        await _repository.ListByStatusAsync(WorkOrderStatus.New, maxCount: 10, "not-a-cursor");
+
+        _client.Queries[0].PageInfo.PageNumber.Should().Be(1);
+        _client.Queries[0].PageInfo.PagingCookie.Should().BeNull();
     }
 
     [Fact]
@@ -167,7 +194,7 @@ public sealed class DataverseWorkOrderRepositoryTests
 
         var found = await _repository.ListByStatusAsync(WorkOrderStatus.New, maxCount: 10);
 
-        found.Should().OnlyContain(workOrder => workOrder.Lines.Count == 0);
+        found.Items.Should().OnlyContain(workOrder => workOrder.Lines.Count == 0);
     }
 
     [Fact]

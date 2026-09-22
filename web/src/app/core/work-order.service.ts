@@ -8,8 +8,8 @@ import {
   WorkOrderClosed,
   WorkOrderStarted,
   WorkOrderCreated,
+  WorkOrderPage,
   WorkOrderStatus,
-  WorkOrderSummary,
 } from './work-order.model';
 
 /**
@@ -23,10 +23,18 @@ export class WorkOrderService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = '/api/work-orders';
 
-  list(status: WorkOrderStatus, take = 50): Observable<WorkOrderSummary[]> {
-    const params = new HttpParams().set('status', status).set('take', take);
+  list(
+    status: WorkOrderStatus,
+    cursor: string | null = null,
+    take = 50,
+  ): Observable<WorkOrderPage> {
+    let params = new HttpParams().set('status', status).set('take', take);
 
-    return this.http.get<WorkOrderSummary[]>(this.baseUrl, { params });
+    if (cursor) {
+      params = params.set('cursor', cursor);
+    }
+
+    return this.http.get<WorkOrderPage>(this.baseUrl, { params });
   }
 
   get(id: string): Observable<WorkOrder> {

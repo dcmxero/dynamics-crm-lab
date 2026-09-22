@@ -23,7 +23,7 @@ internal sealed class WhoAmICommand(IDataverseClient client) : ICliCommand
     public string Usage => "whoami - report the signed-in user and the environment";
 
     /// <inheritdoc/>
-    public async Task ExecuteAsync(IReadOnlyList<string> arguments, CancellationToken cancellationToken)
+    public async Task<int> ExecuteAsync(IReadOnlyList<string> arguments, CancellationToken cancellationToken)
     {
         var response = (WhoAmIResponse)await client
             .ExecuteAsync(new WhoAmIRequest(), cancellationToken)
@@ -43,5 +43,7 @@ internal sealed class WhoAmICommand(IDataverseClient client) : ICliCommand
         await Console.Out.WriteLineAsync($"  business unit {response.BusinessUnitId}").ConfigureAwait(false);
         await Console.Out.WriteLineAsync($"  organization  {response.OrganizationId}").ConfigureAwait(false);
         await Console.Out.WriteLineAsync($"  work orders   {WorkOrderSchema.EntityName}").ConfigureAwait(false);
+
+        return 0;
     }
 }

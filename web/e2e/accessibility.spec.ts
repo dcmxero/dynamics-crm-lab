@@ -44,17 +44,20 @@ async function scan(page: Page): Promise<void> {
 test('the list has no accessibility violations', async ({ page }) => {
   await page.route('**/api/work-orders?*', (route) =>
     route.fulfill({
-      json: [
-        {
-          id: JOB_ID,
-          number: detail.number,
-          status: 'New',
-          technicianId: null,
-          totalPrice: 90,
-          currency: 'EUR',
-          lineCount: 1,
-        },
-      ],
+      json: {
+        items: [
+          {
+            id: JOB_ID,
+            number: detail.number,
+            status: 'New',
+            technicianId: null,
+            totalPrice: 90,
+            currency: 'EUR',
+            lineCount: 1,
+          },
+        ],
+        nextCursor: null,
+      },
       status: 200,
     }),
   );

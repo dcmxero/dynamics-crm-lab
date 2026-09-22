@@ -31,9 +31,7 @@ internal sealed class CommandDispatcher(IEnumerable<ICliCommand> commands)
             return args.Length is 0 ? 0 : 1;
         }
 
-        await command.ExecuteAsync([.. args.Skip(1)], cancellationToken).ConfigureAwait(false);
-
-        return 0;
+        return await command.ExecuteAsync([.. args.Skip(1)], cancellationToken).ConfigureAwait(false);
     }
 
     private static Task PrintUsageAsync(IEnumerable<ICliCommand> available)

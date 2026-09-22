@@ -27,6 +27,22 @@ internal sealed record WorkOrderSummaryResponse(
     int LineCount);
 
 /// <summary>
+/// Represents one page of work orders as the API hands it out.
+/// </summary>
+/// <remarks>
+/// A bare array leaves a caller no way to ask for the rest, and no way to tell
+/// a short page from the end of the list.
+/// </remarks>
+/// <param name="Items">The jobs on this page.</param>
+/// <param name="NextCursor">
+/// What to pass as the cursor to read the next page, or <see langword="null"/>
+/// when this page is the last.
+/// </param>
+internal sealed record WorkOrderPageResponse(
+    IReadOnlyList<WorkOrderSummaryResponse> Items,
+    string? NextCursor);
+
+/// <summary>
 /// Represents one charge as the API hands it out.
 /// </summary>
 /// <param name="Id">The identifier of the line.</param>

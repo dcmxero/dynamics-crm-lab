@@ -18,6 +18,7 @@ builder.Services.AddDataverse(builder.Configuration);
 builder.Services.AddScoped<ICliCommand, WhoAmICommand>();
 builder.Services.AddScoped<ICliCommand, RaiseCommand>();
 builder.Services.AddScoped<ICliCommand, AssignCommand>();
+builder.Services.AddScoped<ICliCommand, StartCommand>();
 builder.Services.AddScoped<ICliCommand, CloseCommand>();
 builder.Services.AddScoped<CommandDispatcher>();
 

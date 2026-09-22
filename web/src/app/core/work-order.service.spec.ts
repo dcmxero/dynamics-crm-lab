@@ -20,7 +20,7 @@ describe('WorkOrderService', () => {
   afterEach(() => backend.verify());
 
   it('asks for a stage and a page size', () => {
-    service.list('InProgress', 25).subscribe();
+    service.list('InProgress', null, 25).subscribe();
 
     const request = backend.expectOne(
       (candidate) => candidate.url === '/api/work-orders' && candidate.method === 'GET',
@@ -28,7 +28,19 @@ describe('WorkOrderService', () => {
 
     expect(request.request.params.get('status')).toBe('InProgress');
     expect(request.request.params.get('take')).toBe('25');
-    request.flush([]);
+    expect(request.request.params.has('cursor')).toBe(false);
+    request.flush({ items: [], nextCursor: null });
+  });
+
+  it('carries a cursor back as it was given', () => {
+    service.list('New', 'opaque-token').subscribe();
+
+    const request = backend.expectOne(
+      (candidate) => candidate.url === '/api/work-orders' && candidate.method === 'GET',
+    );
+
+    expect(request.request.params.get('cursor')).toBe('opaque-token');
+    request.flush({ items: [], nextCursor: null });
   });
 
   it('reads one job by its identifier', () => {
