@@ -18,7 +18,7 @@ internal sealed class RaiseCommand(RaiseWorkOrderHandler handler) : ICliCommand
     public string Usage => "raise <customerId> <equipmentId> <description> <quantity> <unitPrice>";
 
     /// <inheritdoc/>
-    public async Task ExecuteAsync(IReadOnlyList<string> arguments, CancellationToken cancellationToken)
+    public async Task<int> ExecuteAsync(IReadOnlyList<string> arguments, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(arguments);
 
@@ -30,7 +30,7 @@ internal sealed class RaiseCommand(RaiseWorkOrderHandler handler) : ICliCommand
         {
             await Console.Out.WriteLineAsync($"Usage: {Usage}").ConfigureAwait(false);
 
-            return;
+            return 1;
         }
 
         var result = await handler
@@ -46,7 +46,7 @@ internal sealed class RaiseCommand(RaiseWorkOrderHandler handler) : ICliCommand
         {
             await Console.Out.WriteLineAsync($"Not raised: {result.Error}").ConfigureAwait(false);
 
-            return;
+            return 1;
         }
 
         var raised = result.Value!;
@@ -55,5 +55,7 @@ internal sealed class RaiseCommand(RaiseWorkOrderHandler handler) : ICliCommand
         await Console.Out.WriteLineAsync($"  id      {raised.WorkOrderId}").ConfigureAwait(false);
         await Console.Out.WriteLineAsync($"  status  {raised.Status}").ConfigureAwait(false);
         await Console.Out.WriteLineAsync($"  total   {raised.TotalPrice}").ConfigureAwait(false);
+
+        return 0;
     }
 }

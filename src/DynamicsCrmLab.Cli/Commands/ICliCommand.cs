@@ -22,8 +22,13 @@ internal interface ICliCommand
     /// <summary>
     /// Runs the command.
     /// </summary>
+    /// <remarks>
+    /// The exit code is the answer anything scripting this reads. A command
+    /// that reports a refusal on the console and exits successfully tells a
+    /// pipeline the opposite of what it told the person watching.
+    /// </remarks>
     /// <param name="arguments">The arguments that followed the command name.</param>
     /// <param name="cancellationToken">Cancels the operation.</param>
-    /// <returns>A task that completes when the command has finished.</returns>
-    Task ExecuteAsync(IReadOnlyList<string> arguments, CancellationToken cancellationToken);
+    /// <returns>Zero when the command did what was asked; otherwise non-zero.</returns>
+    Task<int> ExecuteAsync(IReadOnlyList<string> arguments, CancellationToken cancellationToken);
 }

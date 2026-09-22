@@ -15,7 +15,7 @@ internal sealed class CloseCommand(CloseWorkOrderHandler handler) : ICliCommand
     public string Usage => "close <workOrderId> <resolution>";
 
     /// <inheritdoc/>
-    public async Task ExecuteAsync(IReadOnlyList<string> arguments, CancellationToken cancellationToken)
+    public async Task<int> ExecuteAsync(IReadOnlyList<string> arguments, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(arguments);
 
@@ -23,7 +23,7 @@ internal sealed class CloseCommand(CloseWorkOrderHandler handler) : ICliCommand
         {
             await Console.Out.WriteLineAsync($"Usage: {Usage}").ConfigureAwait(false);
 
-            return;
+            return 1;
         }
 
         var resolution = string.Join(' ', arguments.Skip(1));
@@ -35,5 +35,7 @@ internal sealed class CloseCommand(CloseWorkOrderHandler handler) : ICliCommand
         await Console.Out.WriteLineAsync(result.IsSuccess
             ? $"  {result.Value!.Number} closed, {result.Value.TotalPrice} to invoice"
             : $"Not closed: {result.Error}").ConfigureAwait(false);
+
+        return result.IsSuccess ? 0 : 1;
     }
 }

@@ -15,7 +15,7 @@ internal sealed class AssignCommand(AssignWorkOrderHandler handler) : ICliComman
     public string Usage => "assign <workOrderId> [technicianId] - omit the technician to take whoever is free";
 
     /// <inheritdoc/>
-    public async Task ExecuteAsync(IReadOnlyList<string> arguments, CancellationToken cancellationToken)
+    public async Task<int> ExecuteAsync(IReadOnlyList<string> arguments, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(arguments);
 
@@ -23,7 +23,7 @@ internal sealed class AssignCommand(AssignWorkOrderHandler handler) : ICliComman
         {
             await Console.Out.WriteLineAsync($"Usage: {Usage}").ConfigureAwait(false);
 
-            return;
+            return 1;
         }
 
         Guid? technicianId = arguments.Count is 2 && Guid.TryParse(arguments[1], out var named) ? named : null;
@@ -35,5 +35,7 @@ internal sealed class AssignCommand(AssignWorkOrderHandler handler) : ICliComman
         await Console.Out.WriteLineAsync(result.IsSuccess
             ? $"  assigned to {result.Value!.TechnicianName}"
             : $"Not assigned: {result.Error}").ConfigureAwait(false);
+
+        return result.IsSuccess ? 0 : 1;
     }
 }
