@@ -1,16 +1,22 @@
 using DynamicsCrmLab.Api;
 using DynamicsCrmLab.Api.WorkOrders;
 using DynamicsCrmLab.Infrastructure;
+using Microsoft.Identity.Web;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // The environment address and any secret stay outside the repository.
 builder.Configuration.AddUserSecrets<Program>(optional: true);
 
-builder.Services.AddWorkOrderUseCases();
-builder.Services.AddDataverse(builder.Configuration);
-
 builder.Services.AddCallerAuthentication(builder.Configuration);
+
+builder.Services.AddWorkOrderUseCases();
+
+// The environment is reached as the caller rather than as the service, so the
+// connection is handed the token this host holds for them.
+builder.Services.AddDataverse(
+    builder.Configuration,
+    services => new CallerDataverseToken(services.GetRequiredService<ITokenAcquisition>()));
 
 builder.Services.AddOpenApi();
 

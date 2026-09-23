@@ -25,6 +25,11 @@ internal sealed class FakeDataverseClient : IDataverseClient
     public ColumnSet? RetrievedColumns { get; private set; }
 
     /// <summary>
+    /// How many single row reads were asked for, for a test about caching.
+    /// </summary>
+    public int RetrieveCount { get; private set; }
+
+    /// <summary>
     /// The columns asked for per table, for a test that reads more than one.
     /// </summary>
     public Dictionary<string, ColumnSet> RetrievedColumnsByEntity { get; } = new(StringComparer.Ordinal);
@@ -59,6 +64,7 @@ internal sealed class FakeDataverseClient : IDataverseClient
         ColumnSet columns,
         CancellationToken cancellationToken = default)
     {
+        RetrieveCount++;
         RetrievedColumns = columns;
         RetrievedColumnsByEntity[entityName] = columns;
 

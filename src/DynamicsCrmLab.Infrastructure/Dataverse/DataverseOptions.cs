@@ -15,7 +15,18 @@ public enum DataverseAuthMode
     /// <summary>
     /// Uses an Entra ID application registration. Suited to services and pipelines.
     /// </summary>
-    ClientSecret = 1
+    ClientSecret = 1,
+
+    /// <summary>
+    /// Acts as the person who called, by exchanging their token for one the
+    /// environment accepts. Suited to a service that answers on their behalf.
+    /// </summary>
+    /// <remarks>
+    /// The environment then applies that person's roles and records the change
+    /// against their name, which is the difference between an audit trail that
+    /// says who did something and one that says the service did.
+    /// </remarks>
+    OnBehalfOf = 2
 }
 
 /// <summary>

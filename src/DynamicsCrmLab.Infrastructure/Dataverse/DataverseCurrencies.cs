@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using DynamicsCrmLab.Schema;
 using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Query;
@@ -17,11 +16,9 @@ namespace DynamicsCrmLab.Infrastructure.Dataverse;
 /// environment is set up, so each one is read once and kept.
 /// </remarks>
 /// <param name="client">The Dataverse connection.</param>
-public sealed class DataverseCurrencies(IDataverseClient client)
+/// <param name="cache">Where what has been read is kept.</param>
+public sealed class DataverseCurrencies(IDataverseClient client, CurrencyCache cache)
 {
-    private readonly ConcurrentDictionary<Guid, string> _codes = new();
-
-    private Guid? _baseCurrencyId;
 
     /// <summary>
     /// Gets the currency the environment was created with.
@@ -33,9 +30,9 @@ public sealed class DataverseCurrencies(IDataverseClient client)
     /// </exception>
     public async Task<(Guid Id, string Code)> BaseAsync(CancellationToken cancellationToken = default)
     {
-        if (_baseCurrencyId is { } known)
+        if (cache.BaseCurrencyId is { } known && cache.TryGetCode(known, out var knownCode))
         {
-            return (known, _codes[known]);
+            return (known, knownCode!);
         }
 
         var organization = await client.RetrieveMultipleAsync(
@@ -55,7 +52,7 @@ public sealed class DataverseCurrencies(IDataverseClient client)
 
         var code = await CodeOfAsync(reference.Id, cancellationToken).ConfigureAwait(false);
 
-        _baseCurrencyId = reference.Id;
+        cache.BaseCurrencyId = reference.Id;
 
         return (reference.Id, code);
     }
@@ -69,9 +66,9 @@ public sealed class DataverseCurrencies(IDataverseClient client)
     /// <exception cref="InvalidOperationException">Thrown when no such currency exists.</exception>
     public async Task<string> CodeOfAsync(Guid currencyId, CancellationToken cancellationToken = default)
     {
-        if (_codes.TryGetValue(currencyId, out var known))
+        if (cache.TryGetCode(currencyId, out var known))
         {
-            return known;
+            return known!;
         }
 
         var record = await client.RetrieveAsync(
@@ -83,7 +80,7 @@ public sealed class DataverseCurrencies(IDataverseClient client)
         var code = record?.GetAttributeValue<string>(CurrencySchema.IsoCode)
                    ?? throw new InvalidOperationException($"Currency {currencyId} does not exist.");
 
-        _codes[currencyId] = code;
+        cache.Remember(currencyId, code);
 
         return code;
     }

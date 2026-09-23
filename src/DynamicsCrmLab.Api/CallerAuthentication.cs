@@ -35,7 +35,9 @@ internal static class CallerAuthentication
 
         services
             .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-            .AddMicrosoftIdentityWebApi(configuration.GetSection("AzureAd"));
+            .AddMicrosoftIdentityWebApi(configuration.GetSection("AzureAd"))
+            .EnableTokenAcquisitionToCallDownstreamApi()
+            .AddInMemoryTokenCaches();
 
         services.AddAuthorization();
 
