@@ -1,13 +1,19 @@
 using System.Globalization;
+using System.Net.Http.Headers;
+using System.Security.Cryptography;
 using DynamicsCrmLab.Application.Abstractions;
 using DynamicsCrmLab.Domain.Customers;
 using DynamicsCrmLab.Domain.Equipments;
 using DynamicsCrmLab.Domain.Technicians;
 using DynamicsCrmLab.Domain.WorkOrders;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.IdentityModel.JsonWebTokens;
+using Microsoft.IdentityModel.Protocols.OpenIdConnect;
+using Microsoft.IdentityModel.Tokens;
 
 namespace DynamicsCrmLab.Api.Tests;
 
@@ -18,7 +24,35 @@ namespace DynamicsCrmLab.Api.Tests;
 /// </summary>
 internal sealed class WorkOrderApiFactory : WebApplicationFactory<Program>
 {
+    private const string Issuer = "https://tests.dynamicscrmlab.invalid/";
+    private const string Audience = "api://tests";
+
+    /// <summary>
+    /// Signs the tokens the tests present. A symmetric key keeps the tests off
+    /// the network: they still travel the real bearer token pipeline, they just
+    /// trust a key the test owns instead of a tenant's published one.
+    /// </summary>
+    private static readonly SymmetricSecurityKey SigningKey =
+        new(RandomNumberGenerator.GetBytes(32)) { KeyId = "tests" };
+
     public InMemoryStore Store { get; } = new();
+
+    /// <summary>
+    /// Creates a client that calls as somebody who consented to the API.
+    /// </summary>
+    /// <param name="scope">
+    /// The scope to put in the token, or <see langword="null"/> to leave it out.
+    /// </param>
+    /// <returns>A client that sends the bearer token on every request.</returns>
+    public HttpClient CreateClientForCaller(string? scope = CallerAuthentication.Scope)
+    {
+        var client = CreateClient();
+
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", TokenFor(scope));
+
+        return client;
+    }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -26,6 +60,19 @@ internal sealed class WorkOrderApiFactory : WebApplicationFactory<Program>
 
         builder.ConfigureServices(services =>
         {
+            services.Configure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, options =>
+            {
+                // Without this the handler would try to download the tenant's
+                // signing keys, which a test has no business doing.
+                options.Configuration = new OpenIdConnectConfiguration();
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidIssuer = Issuer,
+                    ValidAudience = Audience,
+                    IssuerSigningKey = SigningKey
+                };
+            });
+
             services.RemoveAll<IWorkOrderRepository>();
             services.RemoveAll<ICustomerRepository>();
             services.RemoveAll<IEquipmentRepository>();
@@ -35,6 +82,29 @@ internal sealed class WorkOrderApiFactory : WebApplicationFactory<Program>
             services.AddSingleton<ICustomerRepository>(Store);
             services.AddSingleton<IEquipmentRepository>(Store);
             services.AddSingleton<ITechnicianRepository>(Store);
+        });
+    }
+
+    private static string TokenFor(string? scope)
+    {
+        var claims = new Dictionary<string, object>(StringComparer.Ordinal)
+        {
+            ["oid"] = "6f9b1c5e-0b2a-4a2f-8f8e-9a1f0c3d5e77",
+            ["name"] = "Peter Kovac"
+        };
+
+        if (!string.IsNullOrWhiteSpace(scope))
+        {
+            claims["scp"] = scope;
+        }
+
+        return new JsonWebTokenHandler().CreateToken(new SecurityTokenDescriptor
+        {
+            Issuer = Issuer,
+            Audience = Audience,
+            Claims = claims,
+            Expires = DateTime.UtcNow.AddMinutes(5),
+            SigningCredentials = new SigningCredentials(SigningKey, SecurityAlgorithms.HmacSha256)
         });
     }
 }

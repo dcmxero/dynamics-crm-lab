@@ -10,6 +10,8 @@ builder.Configuration.AddUserSecrets<Program>(optional: true);
 builder.Services.AddWorkOrderUseCases();
 builder.Services.AddDataverse(builder.Configuration);
 
+builder.Services.AddCallerAuthentication(builder.Configuration);
+
 builder.Services.AddOpenApi();
 
 // Failures come back as problem details, so the client has one shape to handle
@@ -36,6 +38,9 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
     app.UseCors(AngularDevServer);
 }
+
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapWorkOrders();
 
