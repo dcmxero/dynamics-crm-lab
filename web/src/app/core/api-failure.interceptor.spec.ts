@@ -32,6 +32,23 @@ describe('apiFailureInterceptor', () => {
     });
   }
 
+  it('asks the caller to sign in again when the token is no longer valid', async () => {
+    const failure = await failWith(401, {});
+
+    expect(failure.status).toBe(401);
+    expect(failure.message).toContain('Sign in again');
+    expect(failure.rule).toBe(false);
+  });
+
+  it('says it is a matter of access when the caller is known and refused', async () => {
+    // A refusal is not something signing in again would fix, so it must not
+    // read like one.
+    const failure = await failWith(403, {});
+
+    expect(failure.status).toBe(403);
+    expect(failure.message).toContain('not allowed');
+  });
+
   it('reports the detail from a problem document', async () => {
     const failure = await failWith(422, {
       title: 'The job does not allow this',
