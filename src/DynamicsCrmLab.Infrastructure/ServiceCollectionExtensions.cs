@@ -44,20 +44,59 @@ public static class ServiceCollectionExtensions
     /// </summary>
     /// <param name="services">The container to add to.</param>
     /// <param name="configuration">The configuration the settings are bound from.</param>
-    /// <param name="callerToken">
-    /// How to obtain the token of whoever is holding the request. Needed only by
-    /// <see cref="DataverseAuthMode.OnBehalfOf"/>, and only the host can answer
-    /// it, so it is asked for here rather than assumed.
-    /// </param>
     /// <returns>The same container, to allow chaining.</returns>
-    /// <exception cref="InvalidOperationException">
-    /// Thrown when the settings say to sign in as the caller and no way of
-    /// obtaining their token was supplied.
-    /// </exception>
     public static IServiceCollection AddDataverse(
         this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        Settings(services, configuration);
+
+        // One identity for the whole application, and the connection is
+        // expensive to open, so it is opened once.
+        services.AddSingleton<IDataverseClient, DataverseClient>();
+
+        return Repositories(services);
+    }
+
+    /// <summary>
+    /// Registers the Dataverse connection and the repositories behind the ports,
+    /// signing in as whoever is holding the request.
+    /// </summary>
+    /// <remarks>
+    /// A host that answers for other people cannot be talked into answering as
+    /// itself, so this is not a sign-in mode among others that configuration
+    /// picks between. It is the only way this kind of host connects, and saying
+    /// so here keeps a stray setting from quietly turning it into a service
+    /// account with one identity for everybody.
+    /// </remarks>
+    /// <param name="services">The container to add to.</param>
+    /// <param name="configuration">The configuration the settings are bound from.</param>
+    /// <param name="callerToken">
+    /// How to obtain the token of whoever is holding the request. Only the host
+    /// can answer that, so it is asked for rather than assumed.
+    /// </param>
+    /// <returns>The same container, to allow chaining.</returns>
+    public static IServiceCollection AddDataverseAsTheCaller(
+        this IServiceCollection services,
         IConfiguration configuration,
-        Func<IServiceProvider, IDataverseAccessToken>? callerToken = null)
+        Func<IServiceProvider, IDataverseAccessToken> callerToken)
+    {
+        ArgumentNullException.ThrowIfNull(callerToken);
+
+        Settings(services, configuration);
+
+        services.PostConfigure<DataverseOptions>(options => options.AuthMode = DataverseAuthMode.OnBehalfOf);
+
+        services.AddScoped(callerToken);
+
+        // A connection carries the identity it signed in with, so one shared
+        // connection would hand the second caller the first caller's access.
+        services.AddScoped<IDataverseClient, DataverseClient>();
+
+        return Repositories(services);
+    }
+
+    private static void Settings(IServiceCollection services, IConfiguration configuration)
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(configuration);
@@ -66,27 +105,10 @@ public static class ServiceCollectionExtensions
             .AddOptions<DataverseOptions>()
             .Bind(configuration.GetSection(DataverseOptions.SectionName))
             .ValidateDataAnnotations();
+    }
 
-        var authMode = configuration
-            .GetSection(DataverseOptions.SectionName)
-            .GetValue<DataverseAuthMode>(nameof(DataverseOptions.AuthMode));
-
-        if (authMode is DataverseAuthMode.OnBehalfOf)
-        {
-            services.AddScoped(callerToken ?? throw new InvalidOperationException(
-                "Signing in as the caller needs the host to supply their token."));
-
-            // A connection carries the identity it signed in with, so one shared
-            // connection would hand the second caller the first caller's access.
-            services.AddScoped<IDataverseClient, DataverseClient>();
-        }
-        else
-        {
-            // One identity for the whole application, and the connection is
-            // expensive to open, so it is opened once.
-            services.AddSingleton<IDataverseClient, DataverseClient>();
-        }
-
+    private static IServiceCollection Repositories(IServiceCollection services)
+    {
         // The currencies of an environment change when the environment is set
         // up, so what is read stays read, whoever read it.
         services.AddSingleton<CurrencyCache>();

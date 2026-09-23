@@ -14,7 +14,7 @@ builder.Services.AddWorkOrderUseCases();
 
 // The environment is reached as the caller rather than as the service, so the
 // connection is handed the token this host holds for them.
-builder.Services.AddDataverse(
+builder.Services.AddDataverseAsTheCaller(
     builder.Configuration,
     services => new CallerDataverseToken(services.GetRequiredService<ITokenAcquisition>()));
 
