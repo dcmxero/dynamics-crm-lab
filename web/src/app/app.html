@@ -7,6 +7,11 @@
   <span class="spacer"></span>
 
   <a mat-button routerLink="/work-orders/new">Raise a job</a>
+
+  @if (signedInAs(); as name) {
+    <span class="signed-in">{{ name }}</span>
+    <button mat-button type="button" (click)="signOut()">Sign out</button>
+  }
 </mat-toolbar>
 
 <main id="content" class="content">

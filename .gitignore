@@ -14,3 +14,6 @@ appsettings.Local.json
 appsettings.*.User.json
 .env
 .token-cache
+
+# Local launch profiles: ports and environment are a developer's own business.
+**/Properties/launchSettings.json

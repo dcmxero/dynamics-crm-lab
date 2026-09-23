@@ -5,6 +5,7 @@ using DynamicsCrmLab.Application.UseCases.RaiseWorkOrder;
 using DynamicsCrmLab.Application.UseCases.StartWorkOrder;
 using DynamicsCrmLab.Application.UseCases.ViewWorkOrders;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.Identity.Web;
 
 namespace DynamicsCrmLab.Api.WorkOrders;
 
@@ -25,7 +26,13 @@ internal static class WorkOrderEndpoints
     /// <returns>The group the routes were added to.</returns>
     public static RouteGroupBuilder MapWorkOrders(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/work-orders").WithTags("Work orders");
+        // Every route below speaks for the caller, so none of them answer an
+        // anonymous request. The scope is checked as well as the token: a token
+        // issued for some other application says nothing about this one.
+        var group = app.MapGroup("/api/work-orders")
+            .WithTags("Work orders")
+            .RequireAuthorization()
+            .RequireScope(CallerAuthentication.Scope);
 
         group.MapGet("/", ListAsync)
             .WithName("ListWorkOrders")

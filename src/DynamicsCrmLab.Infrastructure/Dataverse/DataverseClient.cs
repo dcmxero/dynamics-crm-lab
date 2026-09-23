@@ -15,10 +15,15 @@ namespace DynamicsCrmLab.Infrastructure.Dataverse;
 /// opened once, lazily, and reused for the lifetime of the application.
 /// </remarks>
 /// <param name="options">The environment and sign-in settings.</param>
-public sealed class DataverseClient(IOptions<DataverseOptions> options) : IDataverseClient, IDisposable
+/// <param name="accessToken">
+/// Supplies the caller's token when the settings say to sign in as them.
+/// </param>
+public sealed class DataverseClient(
+    IOptions<DataverseOptions> options,
+    IDataverseAccessToken? accessToken = null) : IDataverseClient, IDisposable
 {
     private readonly Lazy<ServiceClient> _client = new(
-        () => Connect(options.Value),
+        () => Connect(options.Value, accessToken),
         LazyThreadSafetyMode.ExecutionAndPublication);
 
     /// <inheritdoc/>
@@ -108,13 +113,35 @@ public sealed class DataverseClient(IOptions<DataverseOptions> options) : IDatav
         }
     }
 
-    private static ServiceClient Connect(DataverseOptions settings)
+    private static ServiceClient Connect(DataverseOptions settings, IDataverseAccessToken? accessToken)
     {
-        var client = new ServiceClient(DataverseConnectionStringBuilder.Build(settings));
+        var client = settings.AuthMode is DataverseAuthMode.OnBehalfOf
+            ? AsTheCaller(settings, accessToken)
+            : new ServiceClient(DataverseConnectionStringBuilder.Build(settings));
 
         return client.IsReady
             ? client
             : throw new InvalidOperationException(
                 $"Could not connect to {settings.Url}: {client.LastError}", client.LastException);
+    }
+
+    /// <summary>
+    /// Opens a connection that presents the caller's own token.
+    /// </summary>
+    /// <remarks>
+    /// The token is fetched through the port rather than put in a connection
+    /// string, because it is not a setting: it belongs to one request and is
+    /// worthless to the next.
+    /// </remarks>
+    private static ServiceClient AsTheCaller(DataverseOptions settings, IDataverseAccessToken? accessToken)
+    {
+        var url = settings.Url
+            ?? throw new InvalidOperationException("No environment address is configured (Dataverse:Url).");
+
+        var supplier = accessToken
+            ?? throw new InvalidOperationException(
+                "Signing in as the caller needs the host to supply their token.");
+
+        return new ServiceClient(url, instance => supplier.ForAsync(new Uri(instance)), useUniqueInstance: true);
     }
 }

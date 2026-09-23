@@ -116,6 +116,7 @@ in one place.
 ```bash
 cd src/DynamicsCrmLab.Api
 dotnet user-secrets set "Dataverse:Url" "https://your-org.crm4.dynamics.com"
+dotnet user-secrets set "AzureAd:ClientSecret" "..."
 dotnet run        # OpenAPI document at /openapi/v1.json
 ```
 
@@ -130,6 +131,26 @@ dotnet run        # OpenAPI document at /openapi/v1.json
 
 Failures come back as problem details. A missing record is 404; a request that
 is well formed but which the state of the job does not allow is 422.
+
+### Who is calling
+
+Every route is closed. A request carries a bearer token from the tenant, and the
+token has to carry the scope this API publishes: a token issued for some other
+application is a valid token for somebody, but it is not consent to work with
+these work orders. A call with no token is 401, a call with a token that does
+not carry the scope is 403.
+
+The API then reaches Dataverse as that person rather than as itself, by
+exchanging their token for one the environment accepts. Their own security roles
+decide what they may read and write, and the environment records the change
+against their name instead of against one service account. The connection is
+therefore opened per request: a shared one would hand the second caller the
+first caller's access.
+
+Two application registrations stand behind this. The API exposes a scope named
+`access_as_user` and holds a delegated permission on Dynamics CRM; the client
+holds a permission on that scope. The API alone has a secret, because the
+exchange is what needs one.
 
 ## The web client
 
@@ -148,14 +169,22 @@ npm run e2e         # Playwright, including an axe scan of every screen
 npm run build
 ```
 
+Signing in happens before any of it. The client sends people to the tenant,
+attaches the token it gets back to calls to its own API and to nothing else, and
+shows who is signed in. The guard on the route is about not opening a page that
+cannot load; what may actually be read and written is settled by the API.
+
 Every failed call goes through one interceptor that reduces problem details to
 a single shape, so no component digs around in an error body. A 422 is shown as
 the job answering back rather than as a fault: a rule the current state does not
-allow is not the same thing as something going wrong.
+allow is not the same thing as something going wrong. A 401 asks for a fresh
+sign-in, a 403 says to ask somebody for access, because trying again would not
+help.
 
 The Playwright suite stubs the API at the network layer, so it exercises the
-client on its own. What the server does with a request is covered by the API
-tests instead.
+client on its own, and it is served from a build with no tenant configured:
+there is no API behind it for a token to be any use to. What the server does
+with a request is covered by the API tests instead.
 
 ## The model-driven app
 

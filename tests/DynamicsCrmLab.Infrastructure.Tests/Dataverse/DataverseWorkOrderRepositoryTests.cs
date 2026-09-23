@@ -27,7 +27,7 @@ public sealed class DataverseWorkOrderRepositoryTests
         _client.RetrieveResults[CurrencySchema.EntityName] = currency;
         _client.EnqueuePage(OrganizationSchema.EntityName, OrganizationPage(currency.Id));
 
-        _repository = new DataverseWorkOrderRepository(_client, new DataverseCurrencies(_client));
+        _repository = new DataverseWorkOrderRepository(_client, new DataverseCurrencies(_client, new CurrencyCache()));
     }
 
     private static EntityCollection OrganizationPage(Guid currencyId)
@@ -226,7 +226,7 @@ public sealed class DataverseWorkOrderRepositoryTests
         });
         client.EnqueuePage(WorkOrderLineSchema.EntityName, lines);
 
-        var repository = new DataverseWorkOrderRepository(client, new DataverseCurrencies(client));
+        var repository = new DataverseWorkOrderRepository(client, new DataverseCurrencies(client, new CurrencyCache()));
 
         var workOrder = await repository.GetByIdAsync(workOrderId);
 

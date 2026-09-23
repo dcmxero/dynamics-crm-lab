@@ -27,6 +27,25 @@ function toFailure(error: unknown): ApiFailure {
     };
   }
 
+  // The API distinguishes not knowing who is calling from knowing and refusing,
+  // and so should the message: one is fixed by signing in again, the other by
+  // asking somebody for access.
+  if (error.status === 401) {
+    return {
+      message: 'Your sign-in is no longer valid. Sign in again to carry on.',
+      rule: false,
+      status: 401,
+    };
+  }
+
+  if (error.status === 403) {
+    return {
+      message: 'Your account is not allowed to work with these jobs.',
+      rule: false,
+      status: 403,
+    };
+  }
+
   return {
     message: detailOf(error) ?? `The request failed (${error.status}).`,
     rule: error.status === 422,

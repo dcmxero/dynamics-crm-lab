@@ -13,7 +13,7 @@ public sealed class WorkOrderEndpointsTests(WorkOrderApiFactoryFixture fixture)
     : IClassFixture<WorkOrderApiFactoryFixture>
 {
     private readonly WorkOrderApiFactory _factory = fixture.Factory;
-    private readonly HttpClient _client = fixture.Factory.CreateClient();
+    private readonly HttpClient _client = fixture.Factory.CreateClientForCaller();
 
     [Fact]
     public async Task Raise_ReturnsCreatedWithTheNewJob()
