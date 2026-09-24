@@ -51,7 +51,12 @@ public sealed class MoneyTests
     [Theory]
     [InlineData(10.344, 10.34)]
     [InlineData(10.346, 10.35)]
-    public void Of_RoundsToTwoDecimalPlaces(decimal input, decimal expected)
+    // Halfway amounts were the ones nobody asked about, and they are the only
+    // ones where a choice is being made at all.
+    [InlineData(10.345, 10.35)]
+    [InlineData(10.335, 10.34)]
+    [InlineData(12.345, 12.35)]
+    public void Of_RoundsToTwoDecimalPlacesTheWayTheStoreDoes(decimal input, decimal expected)
     {
         Money.Of(input).Amount.Should().Be(expected);
     }

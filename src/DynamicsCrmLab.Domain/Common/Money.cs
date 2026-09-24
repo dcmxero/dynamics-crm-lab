@@ -33,7 +33,7 @@ public readonly record struct Money
     /// </summary>
     /// <param name="amount">The amount. Must not be negative.</param>
     /// <param name="currency">The three-letter ISO currency code.</param>
-    /// <returns>The amount rounded to two decimal places.</returns>
+    /// <returns>The amount rounded to two decimal places, halves away from zero.</returns>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when the amount is negative.</exception>
     /// <exception cref="ArgumentException">Thrown when the currency is not a three-letter code.</exception>
     public static Money Of(decimal amount, string currency = "EUR")
@@ -48,7 +48,12 @@ public readonly record struct Money
             throw new ArgumentException("Currency must be a three-letter ISO code.", nameof(currency));
         }
 
-        return new Money(decimal.Round(amount, 2, MidpointRounding.ToEven), currency.ToUpperInvariant());
+        // Away from zero, because that is what the money column does with a
+        // halfway amount, and the store is the record. Rounding to even here
+        // would make the same price worth a different total depending on whether
+        // it arrived through the application or was written straight to the
+        // table, and nobody looking at the two totals could say which was right.
+        return new Money(decimal.Round(amount, 2, MidpointRounding.AwayFromZero), currency.ToUpperInvariant());
     }
 
     /// <summary>
