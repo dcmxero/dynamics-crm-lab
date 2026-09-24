@@ -12,9 +12,13 @@ namespace DynamicsCrmLab.Plugins.WorkOrders;
 /// Refuses a change of stage the job does not allow.
 /// </summary>
 /// <remarks>
-/// Register on Update of dcl_workorder, filtering attribute dcl_status only,
-/// stage PreOperation (20), synchronous, with a pre image carrying dcl_status,
-/// dcl_technicianid and dcl_resolution.
+/// Register on Create of dcl_workorder, and on Update with filtering attribute
+/// dcl_status only, both stage PreOperation (20), synchronous, the update step
+/// with a pre image carrying dcl_status, dcl_technicianid and dcl_resolution.
+///
+/// Create as well as Update, because a job written straight to the table with a
+/// stage of its choosing never transitions at all: it simply begins finished,
+/// with nobody on it and nothing said about what was done.
 ///
 /// Without this the rules live only in the application: anything writing
 /// straight to the table - a bulk edit, a flow, a developer in the maker portal
@@ -41,9 +45,24 @@ public sealed class WorkOrderLifecyclePlugin() : PluginBase(nameof(WorkOrderLife
             return;
         }
 
-        var requested = target.GetAttributeValue<OptionSetValue>(WorkOrderSchema.Status);
-        if (requested is null)
+        // An update carries only the columns it changes, so a status that is
+        // absent means the change is about something else. A status that is
+        // present and empty is a different statement, and one no job can honour:
+        // every job is at some stage.
+        if (!target.Contains(WorkOrderSchema.Status))
         {
+            return;
+        }
+
+        if (target.GetAttributeValue<OptionSetValue>(WorkOrderSchema.Status) is not { } requested)
+        {
+            throw new DomainException("A work order must be at some stage, so its stage cannot be emptied.");
+        }
+
+        if (string.Equals(context.Execution.MessageName, "Create", StringComparison.Ordinal))
+        {
+            Begin((WorkOrderStatus)requested.Value);
+
             return;
         }
 
@@ -87,6 +106,23 @@ public sealed class WorkOrderLifecyclePlugin() : PluginBase(nameof(WorkOrderLife
             case WorkOrderStatus.New:
             default:
                 throw new DomainException($"A work order cannot be put back to {wanted}.");
+        }
+    }
+
+    /// <summary>
+    /// Refuses a job that begins anywhere but at the start.
+    /// </summary>
+    /// <remarks>
+    /// Every later stage is reached by earning it: somebody is put on the job,
+    /// the work begins, the work is described. A record created already at one
+    /// of those stages skipped all of it, and there is no earlier state to
+    /// rebuild and ask.
+    /// </remarks>
+    private static void Begin(WorkOrderStatus status)
+    {
+        if (status is not WorkOrderStatus.New)
+        {
+            throw new DomainException($"A work order begins as {WorkOrderStatus.New}, not as {status}.");
         }
     }
 

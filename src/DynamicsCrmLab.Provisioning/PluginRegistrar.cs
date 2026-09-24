@@ -68,6 +68,12 @@ internal sealed class PluginRegistrar(IDataverseClient client, ILogger<PluginReg
         // than only where the application runs.
         new(
             $"{AssemblyName}.WorkOrders.WorkOrderLifecyclePlugin",
+            "Create",
+            WorkOrderSchema.EntityName,
+            PipelineStage.PreOperation,
+            ExecutionMode.Synchronous),
+        new(
+            $"{AssemblyName}.WorkOrders.WorkOrderLifecyclePlugin",
             "Update",
             WorkOrderSchema.EntityName,
             PipelineStage.PreOperation,
@@ -80,6 +86,15 @@ internal sealed class PluginRegistrar(IDataverseClient client, ILogger<PluginReg
                 WorkOrderSchema.Technician,
                 WorkOrderSchema.Resolution
             ]),
+        // A finished job is a statement to the customer. Nothing about the
+        // record may change once it is made.
+        new(
+            $"{AssemblyName}.WorkOrders.ClosedWorkOrderPlugin",
+            "Update",
+            WorkOrderSchema.EntityName,
+            PipelineStage.PreOperation,
+            ExecutionMode.Synchronous,
+            PreImageAttributes: [WorkOrderSchema.Status, WorkOrderSchema.Number]),
         new(
             $"{AssemblyName}.WorkOrders.ClosedWorkOrderLinesPlugin",
             "Create",

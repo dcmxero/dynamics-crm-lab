@@ -73,7 +73,8 @@ application rather than a second copy that would drift.
 
 | Plug-in | Registration |
 |---|---|
-| `WorkOrderLifecyclePlugin` | Update of `dcl_workorder`, filtering attribute `dcl_status`, PreOperation, synchronous, pre image of the stage, technician and resolution |
+| `WorkOrderLifecyclePlugin` | Create of `dcl_workorder`, and Update with filtering attribute `dcl_status`, PreOperation, synchronous, pre image of the stage, technician and resolution |
+| `ClosedWorkOrderPlugin` | Update of `dcl_workorder`, no filtering attributes, PreOperation, synchronous, pre image of the stage and number |
 | `ClosedWorkOrderLinesPlugin` | Create, Update and Delete of `dcl_workorderline`, PreOperation, synchronous, pre image `dcl_workorderid` |
 | `WorkOrderPricingPlugin` | Create, Update and Delete of `dcl_workorderline`, PostOperation, synchronous, pre image `dcl_workorderid` |
 | `WorkOrderClosedNotificationPlugin` | Update of `dcl_workorder`, filtering attribute `dcl_status`, PostOperation, **asynchronous**, pre image `dcl_status` and `dcl_number` |
@@ -85,10 +86,32 @@ that is finished. The plug-in does not restate the rules: it rebuilds the stage
 the job came from into the aggregate and asks the aggregate to make the move, so
 the platform gives the same answer the API gives.
 
+Guarding only the move turned out to leave three ways round it, all of which a
+review reproduced against a live environment. A job created straight at a later
+stage never moves at all. An update that empties the stage is not a move either,
+and it stranded the record: every later change reads the stage it came from and
+found nothing there. And an update that leaves a closed job closed while
+emptying its resolution is not a stage change, so the stage guard was never
+asked. Hence the second guard, which is asked about every column: closing a job
+is a statement to the customer, and the record has to be shut to everything, not
+only to going backwards.
+
+For the same reason a charge is judged by both jobs an update concerns. Moved
+off a closed job it would leave that job cheaper than what was agreed, and the
+pricing step would dutifully write the smaller total.
+
+One consequence is deliberate and worth knowing: a closed job can no longer be
+deleted either, because deleting it cascades to its charges and they are shut.
+
 Pricing is triggered by the line rather than by the job: a job is saved before
 its lines exist, so a step on the job would add up an empty list. The
 notification runs asynchronously because nobody saving the form needs to wait
 for a follow-up task to exist.
+
+Money is rounded halves away from zero, matching what the money column does,
+because the store is the record. Rounding differently would make the same price
+worth a different total depending on whether it arrived through the application
+or was written straight to the table.
 
 The sandbox loads the assembly it is given and nothing beside it, so the
 plug-ins travel as a **plug-in package** carrying the domain with them. The

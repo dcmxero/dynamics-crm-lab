@@ -43,6 +43,68 @@ public sealed class ClosedWorkOrderLinesPluginTests
     }
 
     [Fact]
+    public void Execute_RefusesAChargeMovedOffAClosedJob()
+    {
+        // The charge is moving to a job that is open, so asking only about where
+        // it lands finds nothing wrong. The job it leaves is finished, and it
+        // would quietly end up cheaper than what the customer was told.
+        var closed = Guid.NewGuid();
+        var open = Guid.NewGuid();
+        var context = ContextWith(closed, Closed, open, InProgress);
+
+        var moving = () => Run(
+            context,
+            new Entity(WorkOrderLine, Guid.NewGuid())
+            {
+                [ParentLookup] = new EntityReference(WorkOrder, open)
+            },
+            LineOf(closed),
+            "Update");
+
+        moving.Should().Throw<InvalidPluginExecutionException>()
+            .WithMessage("*is closed*");
+    }
+
+    [Fact]
+    public void Execute_RefusesAChargeMovedOntoAClosedJob()
+    {
+        var open = Guid.NewGuid();
+        var closed = Guid.NewGuid();
+        var context = ContextWith(open, InProgress, closed, Closed);
+
+        var moving = () => Run(
+            context,
+            new Entity(WorkOrderLine, Guid.NewGuid())
+            {
+                [ParentLookup] = new EntityReference(WorkOrder, closed)
+            },
+            LineOf(open),
+            "Update");
+
+        moving.Should().Throw<InvalidPluginExecutionException>()
+            .WithMessage("*is closed*");
+    }
+
+    [Fact]
+    public void Execute_AllowsAChargeMovedBetweenTwoJobsThatAreStillRunning()
+    {
+        var from = Guid.NewGuid();
+        var to = Guid.NewGuid();
+        var context = ContextWith(from, InProgress, to, InProgress);
+
+        var moving = () => Run(
+            context,
+            new Entity(WorkOrderLine, Guid.NewGuid())
+            {
+                [ParentLookup] = new EntityReference(WorkOrder, to)
+            },
+            LineOf(from),
+            "Update");
+
+        moving.Should().NotThrow();
+    }
+
+    [Fact]
     public void Execute_LeavesAJobThatIsStillRunningAlone()
     {
         var adding = () => RunPlugin(InProgress, line => line, message: "Create");
@@ -78,17 +140,26 @@ public sealed class ClosedWorkOrderLinesPluginTests
     {
         var context = new XrmFakedContext();
 
-        context.Initialize(new List<Entity>
-        {
-            new(WorkOrder, workOrderId)
-            {
-                ["dcl_number"] = "WO-20260901-ABCDEF",
-                ["dcl_status"] = new OptionSetValue(status)
-            }
-        });
+        context.Initialize(new List<Entity> { JobOf(workOrderId, status) });
 
         return context;
     }
+
+    private static XrmFakedContext ContextWith(Guid first, int firstStatus, Guid second, int secondStatus)
+    {
+        var context = new XrmFakedContext();
+
+        context.Initialize(new List<Entity> { JobOf(first, firstStatus), JobOf(second, secondStatus) });
+
+        return context;
+    }
+
+    private static Entity JobOf(Guid workOrderId, int status) =>
+        new(WorkOrder, workOrderId)
+        {
+            ["dcl_number"] = "WO-20260901-ABCDEF",
+            ["dcl_status"] = new OptionSetValue(status)
+        };
 
     private static void Run(XrmFakedContext context, object target, Entity? preImage, string message)
     {

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using DynamicsCrmLab.Domain.Common;
 using DynamicsCrmLab.Domain.WorkOrders;
 using DynamicsCrmLab.Plugins.Infrastructure;
@@ -20,6 +21,10 @@ namespace DynamicsCrmLab.Plugins.WorkOrders;
 /// table would change what a finished job costs after the customer was told,
 /// and the pricing step would dutifully rewrite the total to match.
 ///
+/// An update that moves a charge between jobs concerns two of them, and either
+/// one being closed is reason to refuse: the job it leaves ends up cheaper than
+/// what was agreed, the job it arrives at dearer.
+///
 /// PreOperation because a refusal has to stop the write.
 /// </remarks>
 public sealed class ClosedWorkOrderLinesPlugin() : PluginBase(nameof(ClosedWorkOrderLinesPlugin))
@@ -35,15 +40,17 @@ public sealed class ClosedWorkOrderLinesPlugin() : PluginBase(nameof(ClosedWorkO
             return;
         }
 
-        var workOrderId = WorkOrderIdOf(context);
-        if (workOrderId is null)
+        foreach (var workOrderId in WorkOrderIdsOf(context))
         {
-            return;
+            Refuse(context, workOrderId);
         }
+    }
 
+    private void Refuse(PluginContext context, Guid workOrderId)
+    {
         var job = context.Service.Retrieve(
             WorkOrderSchema.EntityName,
-            workOrderId.Value,
+            workOrderId,
             new ColumnSet(WorkOrderSchema.Status, WorkOrderSchema.Number));
 
         var status = (WorkOrderStatus)job.GetAttributeValue<OptionSetValue>(WorkOrderSchema.Status).Value;
@@ -53,18 +60,34 @@ public sealed class ClosedWorkOrderLinesPlugin() : PluginBase(nameof(ClosedWorkO
             return;
         }
 
-        var number = job.GetAttributeValue<string>(WorkOrderSchema.Number) ?? workOrderId.Value.ToString();
+        var number = job.GetAttributeValue<string>(WorkOrderSchema.Number) ?? workOrderId.ToString();
 
         context.Tracing.Trace("{0}: {1} is closed, refusing the change", PluginName, number);
 
         throw new DomainException($"Work order {number} is closed, so its charges can no longer be changed.");
     }
 
-    private static Guid? WorkOrderIdOf(PluginContext context)
+    /// <summary>
+    /// Reads every job the change concerns.
+    /// </summary>
+    /// <remarks>
+    /// Usually one. An update that repoints the lookup concerns two, and taking
+    /// only the one the charge is moving to would let it be taken off a closed
+    /// job unchallenged.
+    /// </remarks>
+    private static IEnumerable<Guid> WorkOrderIdsOf(PluginContext context)
     {
-        var fromTarget = context.Target?.GetAttributeValue<EntityReference>(WorkOrderLineSchema.WorkOrder);
-        var fromImage = context.PreImage()?.GetAttributeValue<EntityReference>(WorkOrderLineSchema.WorkOrder);
+        var fromTarget = context.Target?.GetAttributeValue<EntityReference>(WorkOrderLineSchema.WorkOrder)?.Id;
+        var fromImage = context.PreImage()?.GetAttributeValue<EntityReference>(WorkOrderLineSchema.WorkOrder)?.Id;
 
-        return (fromTarget ?? fromImage)?.Id;
+        if (fromTarget is { } target)
+        {
+            yield return target;
+        }
+
+        if (fromImage is { } image && image != fromTarget)
+        {
+            yield return image;
+        }
     }
 }
