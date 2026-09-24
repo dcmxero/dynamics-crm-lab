@@ -98,6 +98,85 @@ public sealed class WorkOrderLifecyclePluginTests
         running.Should().NotThrow();
     }
 
+    [Fact]
+    public void Execute_RefusesTheStageBeingEmptied()
+    {
+        // An absent stage means the change is about something else. A stage that
+        // is present and empty is a statement no job can honour, and leaving it
+        // written would strand the record: every later stage change reads the
+        // stage it came from and would find nothing there.
+        var target = new Entity(WorkOrder, Guid.NewGuid()) { [Status] = null };
+
+        var emptying = () => Run(new XrmFakedContext(), target, ImageAt(target.Id, InProgress));
+
+        emptying.Should().Throw<InvalidPluginExecutionException>()
+            .WithMessage("*cannot be emptied*");
+    }
+
+    [Fact]
+    public void Execute_RefusesAJobCreatedAlreadyFinished()
+    {
+        // Nothing transitions here, so the stage guard on update never sees it:
+        // the record simply begins closed, with nobody on it and nothing said
+        // about what was done.
+        var creating = () => Create(Closed);
+
+        creating.Should().Throw<InvalidPluginExecutionException>()
+            .WithMessage("*begins as New*");
+    }
+
+    [Fact]
+    public void Execute_RefusesAJobCreatedAlreadyAssigned()
+    {
+        var creating = () => Create(Assigned);
+
+        creating.Should().Throw<InvalidPluginExecutionException>();
+    }
+
+    [Fact]
+    public void Execute_AllowsAJobCreatedAtTheStartingStage()
+    {
+        var creating = () => Create(New);
+
+        creating.Should().NotThrow();
+    }
+
+    [Fact]
+    public void Execute_AllowsAJobCreatedWithNoStageAtAll()
+    {
+        // The column carries a default, so saying nothing is saying New.
+        var creating = () => Create(status: null);
+
+        creating.Should().NotThrow();
+    }
+
+    private static void Create(int? status)
+    {
+        var target = new Entity(WorkOrder, Guid.NewGuid());
+
+        if (status is { } value)
+        {
+            target[Status] = new OptionSetValue(value);
+        }
+
+        var context = new XrmFakedContext();
+        var pluginContext = context.GetDefaultPluginContext();
+
+        pluginContext.MessageName = "Create";
+        pluginContext.Stage = 20;
+        pluginContext.Depth = 1;
+        pluginContext.InputParameters = new ParameterCollection { { "Target", target } };
+
+        context.ExecutePluginWith<WorkOrderLifecyclePlugin>(pluginContext);
+    }
+
+    private static Entity ImageAt(Guid workOrderId, int status) =>
+        new(WorkOrder, workOrderId)
+        {
+            [Status] = new OptionSetValue(status),
+            ["dcl_number"] = "WO-20260901-ABCDEF"
+        };
+
     private static void RunPlugin(int from, int to, Action<Entity>? image = null)
     {
         var context = new XrmFakedContext();

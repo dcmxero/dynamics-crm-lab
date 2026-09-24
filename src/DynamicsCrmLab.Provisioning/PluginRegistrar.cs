@@ -68,6 +68,12 @@ internal sealed class PluginRegistrar(IDataverseClient client, ILogger<PluginReg
         // than only where the application runs.
         new(
             $"{AssemblyName}.WorkOrders.WorkOrderLifecyclePlugin",
+            "Create",
+            WorkOrderSchema.EntityName,
+            PipelineStage.PreOperation,
+            ExecutionMode.Synchronous),
+        new(
+            $"{AssemblyName}.WorkOrders.WorkOrderLifecyclePlugin",
             "Update",
             WorkOrderSchema.EntityName,
             PipelineStage.PreOperation,
