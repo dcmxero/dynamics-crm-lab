@@ -1,3 +1,4 @@
+using System.ServiceModel;
 using DynamicsCrmLab.Application.Abstractions;
 using DynamicsCrmLab.Domain.WorkOrders;
 using DynamicsCrmLab.Infrastructure.Dataverse.Mapping;
@@ -25,10 +26,25 @@ public sealed class DataverseWorkOrderRepository(IDataverseClient client, Datave
     /// </summary>
     private const int MaxPageSize = 5000;
 
+    /// <summary>
+    /// The version each job carried when this request read it.
+    /// </summary>
+    /// <remarks>
+    /// The version belongs to the row, not to the job: it says nothing a
+    /// technician or a customer would recognise, so it is kept here rather than
+    /// carried through the domain. One repository serves one request, which is
+    /// exactly the span between reading a job and writing it back.
+    /// </remarks>
+    private readonly Dictionary<Guid, string> _versionsRead = [];
+
     /// <inheritdoc/>
-    public async Task<Guid> AddAsync(WorkOrder workOrder, CancellationToken cancellationToken = default)
+    public async Task<StoredWorkOrder> AddAsync(
+        WorkOrder workOrder,
+        string requestKey,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(workOrder);
+        ArgumentException.ThrowIfNullOrWhiteSpace(requestKey);
 
         var (currencyId, _) = await currencies.BaseAsync(cancellationToken).ConfigureAwait(false);
 
@@ -38,7 +54,7 @@ public sealed class DataverseWorkOrderRepository(IDataverseClient client, Datave
         // is missing what it costs, and a plug-in would have totalled it.
         var writes = new OrganizationRequestCollection
         {
-            new CreateRequest { Target = WorkOrderMapper.ToRecord(workOrder, currencyId) }
+            new CreateRequest { Target = WorkOrderMapper.ToRecord(workOrder, currencyId, requestKey) }
         };
 
         foreach (var line in workOrder.Lines)
@@ -49,11 +65,57 @@ public sealed class DataverseWorkOrderRepository(IDataverseClient client, Datave
             });
         }
 
-        await client.ExecuteAsync(
-            new ExecuteTransactionRequest { Requests = writes, ReturnResponses = false },
+        try
+        {
+            await client.ExecuteAsync(
+                new ExecuteTransactionRequest { Requests = writes, ReturnResponses = false },
+                cancellationToken).ConfigureAwait(false);
+        }
+        catch (FaultException<OrganizationServiceFault> fault) when (DataverseFault.IsDuplicateKey(fault))
+        {
+            // The same request arrived before and the job it raised is the
+            // answer to this one. The key is unique in the store, so the second
+            // request cannot have slipped past a check: it was refused.
+            return await RaisedEarlierAsync(requestKey, cancellationToken).ConfigureAwait(false);
+        }
+
+        return new StoredWorkOrder(workOrder.Id, workOrder.Number, WasRaisedNow: true);
+    }
+
+    /// <summary>
+    /// Reads the job an earlier request with this key raised.
+    /// </summary>
+    private async Task<StoredWorkOrder> RaisedEarlierAsync(string requestKey, CancellationToken cancellationToken)
+    {
+        var found = await client.RetrieveMultipleAsync(
+            new QueryExpression(WorkOrderSchema.EntityName)
+            {
+                ColumnSet = new ColumnSet(WorkOrderSchema.Number),
+                TopCount = 1,
+                Criteria =
+                {
+                    Conditions =
+                    {
+                        new ConditionExpression(WorkOrderSchema.RequestKey, ConditionOperator.Equal, requestKey)
+                    }
+                }
+            },
             cancellationToken).ConfigureAwait(false);
 
-        return workOrder.Id;
+        if (found.Entities.Count is 0)
+        {
+            // The store said this key is taken and then could not show what by.
+            // Guessing would be worse than saying so.
+            throw new InvalidOperationException(
+                $"Request {requestKey} was refused as a repeat, but no work order carries it.");
+        }
+
+        var earlier = found.Entities[0];
+
+        return new StoredWorkOrder(
+            earlier.Id,
+            earlier.GetAttributeValue<string>(WorkOrderSchema.Number) ?? "(unnumbered)",
+            WasRaisedNow: false);
     }
 
     /// <inheritdoc/>
@@ -72,6 +134,11 @@ public sealed class DataverseWorkOrderRepository(IDataverseClient client, Datave
             return null;
         }
 
+        if (record.RowVersion is { } version)
+        {
+            _versionsRead[id] = version;
+        }
+
         var lines = await ReadLinesAsync(id, cancellationToken).ConfigureAwait(false);
         var currency = await CurrencyOfAsync(record, cancellationToken).ConfigureAwait(false);
 
@@ -79,11 +146,41 @@ public sealed class DataverseWorkOrderRepository(IDataverseClient client, Datave
     }
 
     /// <inheritdoc/>
-    public Task UpdateAsync(WorkOrder workOrder, CancellationToken cancellationToken = default)
+    public async Task UpdateAsync(WorkOrder workOrder, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(workOrder);
 
-        return client.UpdateAsync(WorkOrderMapper.ToUpdateRecord(workOrder), cancellationToken);
+        var record = WorkOrderMapper.ToUpdateRecord(workOrder);
+
+        if (!_versionsRead.TryGetValue(workOrder.Id, out var versionRead))
+        {
+            // Nothing was read, so there is nothing this write could be racing
+            // against. Insisting on a version here would refuse writes that are
+            // not concurrent at all.
+            await client.UpdateAsync(record, cancellationToken).ConfigureAwait(false);
+
+            return;
+        }
+
+        record.RowVersion = versionRead;
+
+        var update = new UpdateRequest
+        {
+            Target = record,
+            ConcurrencyBehavior = ConcurrencyBehavior.IfRowVersionMatches
+        };
+
+        try
+        {
+            await client.ExecuteAsync(update, cancellationToken).ConfigureAwait(false);
+        }
+        catch (FaultException<OrganizationServiceFault> fault) when (DataverseFault.IsStale(fault))
+        {
+            throw new ConcurrencyException(
+                "Somebody else changed this work order while you were working on it. "
+                + "Read it again and retry.",
+                fault);
+        }
     }
 
     /// <inheritdoc/>

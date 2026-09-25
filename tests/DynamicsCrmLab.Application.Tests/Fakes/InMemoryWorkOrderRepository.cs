@@ -10,10 +10,26 @@ internal sealed class InMemoryWorkOrderRepository : IWorkOrderRepository
 
     public IReadOnlyCollection<WorkOrder> Stored => _stored.Values;
 
-    public Task<Guid> AddAsync(WorkOrder workOrder, CancellationToken cancellationToken = default)
+    private readonly Dictionary<string, Guid> _byRequestKey = new(StringComparer.Ordinal);
+
+    public Task<StoredWorkOrder> AddAsync(
+        WorkOrder workOrder,
+        string requestKey,
+        CancellationToken cancellationToken = default)
     {
+        // The store is what decides that two requests with one key mean one
+        // job, so the fake has to decide it the same way.
+        if (_byRequestKey.TryGetValue(requestKey, out var raisedEarlier))
+        {
+            var earlier = _stored[raisedEarlier];
+
+            return Task.FromResult(new StoredWorkOrder(earlier.Id, earlier.Number, WasRaisedNow: false));
+        }
+
         _stored[workOrder.Id] = workOrder;
-        return Task.FromResult(workOrder.Id);
+        _byRequestKey[requestKey] = workOrder.Id;
+
+        return Task.FromResult(new StoredWorkOrder(workOrder.Id, workOrder.Number, WasRaisedNow: true));
     }
 
     public Task<WorkOrder?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>

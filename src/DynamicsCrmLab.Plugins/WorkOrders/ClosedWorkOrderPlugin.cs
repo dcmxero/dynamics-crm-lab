@@ -40,6 +40,8 @@ public sealed class ClosedWorkOrderPlugin() : PluginBase(nameof(ClosedWorkOrderP
 
         var preImage = context.PreImage();
 
+        // A missing stage is read the same way as an unknown one: nothing is
+        // being protected, and a record without a stage still has to be fixable.
         if (preImage?.GetAttributeValue<OptionSetValue>(WorkOrderSchema.Status) is not { } was)
         {
             context.Tracing.Trace("{0}: no pre image, the stage it came from is unknown", PluginName);

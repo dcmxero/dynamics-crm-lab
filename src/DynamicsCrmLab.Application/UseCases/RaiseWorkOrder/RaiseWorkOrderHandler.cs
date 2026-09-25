@@ -63,7 +63,14 @@ public sealed class RaiseWorkOrderHandler(
         }
 
         WorkOrder workOrder;
-        Guid id;
+        StoredWorkOrder stored;
+
+        // Without a key from the caller, this request is unlike any other, and
+        // saying so with a fresh one keeps the store's rule the same for
+        // everybody rather than something only some requests obey.
+        var requestKey = string.IsNullOrWhiteSpace(command.RequestKey)
+            ? Guid.NewGuid().ToString()
+            : command.RequestKey;
 
         try
         {
@@ -76,7 +83,7 @@ public sealed class RaiseWorkOrderHandler(
 
             // The store enforces rules of its own, and a rule it refuses is the
             // same kind of answer as one the aggregate refuses.
-            id = await workOrders.AddAsync(workOrder, cancellationToken).ConfigureAwait(false);
+            stored = await workOrders.AddAsync(workOrder, requestKey, cancellationToken).ConfigureAwait(false);
         }
         // A value the domain refuses to build from - a negative price - arrives as
         // an argument exception rather than a broken rule, but to the caller it
@@ -90,9 +97,27 @@ public sealed class RaiseWorkOrderHandler(
             return Result.RuleBroken<RaiseWorkOrderResult>(exception.Message);
         }
 
+        if (!stored.WasRaisedNow)
+        {
+            // The job the earlier request raised is the answer to this one. Its
+            // stage and its charges may have moved on since, so nothing about
+            // the aggregate built here is reported back as though it were fresh.
+            ApplicationLog.WorkOrderAlreadyRaised(logger, requestKey, stored.Number);
+
+            return Result.Success(new RaiseWorkOrderResult(
+                stored.WorkOrderId,
+                stored.Number,
+                workOrder.Status,
+                workOrder.TotalPrice,
+                WasRaisedNow: false));
+        }
+
         ApplicationLog.WorkOrderRaised(logger, workOrder.Number, customer.Id);
 
-        return Result.Success(
-            new RaiseWorkOrderResult(id, workOrder.Number, workOrder.Status, workOrder.TotalPrice));
+        return Result.Success(new RaiseWorkOrderResult(
+            stored.WorkOrderId,
+            workOrder.Number,
+            workOrder.Status,
+            workOrder.TotalPrice));
     }
 }

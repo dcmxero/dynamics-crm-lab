@@ -145,6 +145,8 @@ dotnet run        # OpenAPI document at /openapi/v1.json
 
 | Route | Purpose |
 |---|---|
+| `GET /api/customers?name=&take=` | customers whose name begins with what has been typed |
+| `GET /api/customers/{id}/equipment` | the equipment registered to one customer |
 | `GET /api/work-orders?status=&take=&cursor=` | one page of jobs that have reached a stage |
 | `GET /api/work-orders/{id}` | one job in full |
 | `POST /api/work-orders` | raise a job |
@@ -153,7 +155,25 @@ dotnet run        # OpenAPI document at /openapi/v1.json
 | `POST /api/work-orders/{id}/closure` | finish it |
 
 Failures come back as problem details. A missing record is 404; a request that
-is well formed but which the state of the job does not allow is 422.
+is well formed but which the state of the job does not allow is 422; a request
+that arrived after somebody else changed the same job is 409.
+
+### Asking twice
+
+Every use case reads a job, asks the aggregate to make a move and writes the
+result back, and between the read and the write somebody else can have moved the
+same job on. The version the row carried when it was read travels with the write
+and the platform refuses it if the row has moved since, so the second of two
+people closing the same job is told rather than quietly replacing the first
+account of what was done.
+
+Raising is different: there is nothing to have moved on, but a client that times
+out and retries would raise the job twice. A request may name itself with an
+`Idempotency-Key` header; the name is a unique key on the table, so the second
+write is refused by the store rather than by a check a fast enough retry could
+slip past, and the repeat is answered with the job the first request raised, as
+200 rather than 201. A caller who names nothing gets a name of their own, so the
+rule is the same for every request instead of something only some of them obey.
 
 ### Who is calling
 
@@ -186,11 +206,21 @@ cd web
 npm install
 npm start           # proxies /api to the backend on https://localhost:7134
 
+# To sign in against your own tenant, copy
+# src/environments/environment.local.example.ts to environment.local.ts,
+# fill in your two registrations, then:
+npm run start:tenant
+
 npm run lint
 npm test            # unit tests
 npm run e2e         # Playwright, including an axe scan of every screen
 npm run build
 ```
+
+A job is raised by choosing, not by typing: the customer is searched for by name
+and the units offered are that customer's own, because a job cannot be raised
+against somebody else's equipment. A customer with exactly one unit has it
+chosen for them.
 
 Signing in happens before any of it. The client sends people to the tenant,
 attaches the token it gets back to calls to its own API and to nothing else, and
@@ -329,7 +359,8 @@ cd src/DynamicsCrmLab.Cli
 dotnet user-secrets set "Dataverse:Url" "https://your-org.crm4.dynamics.com"
 
 dotnet run -- whoami
-dotnet run -- raise <customerId> <equipmentId> "Technician labour" 2 45
+dotnet run -- seed          # customers, equipment and technicians to show it with
+dotnet run -- raise <customerId> <equipmentId> "Technician labour" 2 45 [requestKey]
 dotnet run -- assign <workOrderId>
 dotnet run -- start <workOrderId>
 dotnet run -- close <workOrderId> "Replaced the compressor seal."
@@ -348,6 +379,16 @@ dotnet user-secrets set "Dataverse:ClientSecret" "..."
 
 That registration also needs an application user with a security role in the
 target environment, otherwise it can reach the API but sees no data.
+
+Two application registrations stand behind the API itself, and nothing in this
+repository names them: the API reads `AzureAd:TenantId`, `AzureAd:ClientId`,
+`AzureAd:Audience` and `AzureAd:ClientSecret` from the same secret store, and the
+client reads its own from an uncommitted `environment.local.ts`. A checkout
+carries neither, so it runs unsigned-in until somebody points it at a tenant of
+their own.
+
+A client secret expires. When the API starts answering every call with a failure
+to acquire a token, that is usually all it is.
 
 ## Conventions
 

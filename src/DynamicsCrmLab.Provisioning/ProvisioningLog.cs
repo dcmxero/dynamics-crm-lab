@@ -54,14 +54,14 @@ internal static partial class ProvisioningLog
     [LoggerMessage(
         EventId = 2010,
         Level = LogLevel.Information,
-        Message = "Alternate key on the work order number is already there.")]
-    public static partial void KeyExists(ILogger logger);
+        Message = "Alternate key {SchemaName} is already there.")]
+    public static partial void KeyExists(ILogger logger, string schemaName);
 
     [LoggerMessage(
         EventId = 2011,
         Level = LogLevel.Information,
-        Message = "Created the alternate key on the work order number.")]
-    public static partial void KeyCreated(ILogger logger);
+        Message = "Created the alternate key {SchemaName}.")]
+    public static partial void KeyCreated(ILogger logger, string schemaName);
 
     [LoggerMessage(
         EventId = 2024,

@@ -107,3 +107,16 @@ export interface ApiFailure {
   readonly rule: boolean;
   readonly status: number;
 }
+
+/** A customer a job can be raised for. */
+export interface Customer {
+  readonly id: string;
+  readonly name: string;
+  readonly email: string;
+}
+
+/** A unit a job can be raised against. */
+export interface Equipment {
+  readonly id: string;
+  readonly serialNumber: string;
+}

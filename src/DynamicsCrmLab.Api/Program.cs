@@ -1,4 +1,5 @@
 using DynamicsCrmLab.Api;
+using DynamicsCrmLab.Api.Catalogue;
 using DynamicsCrmLab.Api.WorkOrders;
 using DynamicsCrmLab.Infrastructure;
 using Microsoft.Identity.Web;
@@ -23,6 +24,7 @@ builder.Services.AddOpenApi();
 // Failures come back as problem details, so the client has one shape to handle
 // rather than a mix of plain text, HTML and JSON.
 builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<StaleRecordHandler>();
 builder.Services.AddExceptionHandler<MalformedRequestHandler>();
 
 const string AngularDevServer = "angular-dev-server";
@@ -48,6 +50,7 @@ if (app.Environment.IsDevelopment())
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.MapCatalogue();
 app.MapWorkOrders();
 
 await app.RunAsync().ConfigureAwait(false);

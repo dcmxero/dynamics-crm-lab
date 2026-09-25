@@ -52,6 +52,20 @@ async function stubList(
   );
 }
 
+/** Answers the lists the raise form offers to choose from. */
+async function stubCatalogue(page: Page): Promise<void> {
+  await page.route('**/api/customers?*', (route) =>
+    route.fulfill({
+      status: 200,
+      json: [{ id: detail.customerId, name: 'Acme Foods', email: 'service@acme.example' }],
+    }),
+  );
+
+  await page.route(`**/api/customers/${detail.customerId}/equipment`, (route) =>
+    route.fulfill({ status: 200, json: [{ id: detail.equipmentId, serialNumber: 'SN-0001' }] }),
+  );
+}
+
 async function stubDetail(page: Page): Promise<void> {
   await page.route(`**/api/work-orders/${JOB_ID}`, (route) =>
     route.fulfill({ json: detail, status: 200 }),
@@ -236,10 +250,14 @@ test('raises a job and lands on it', async ({ page }) => {
     });
   });
 
+  await stubCatalogue(page);
+
   await page.goto('/work-orders/new');
 
-  await page.getByLabel('Customer').fill(detail.customerId);
-  await page.getByLabel('Equipment').fill(detail.equipmentId);
+  await page.getByLabel('Customer').fill('Acme');
+  await page.getByRole('option', { name: /Acme Foods/ }).click();
+  // One unit is chosen for them, so the job can be raised without touching it.
+  await expect(page.getByLabel('Equipment')).toHaveValue(detail.equipmentId);
   await page.getByLabel('Description').fill('Technician labour');
   await page.getByLabel('Quantity').fill('2');
   await page.getByLabel('Unit price').fill('45');
@@ -249,11 +267,27 @@ test('raises a job and lands on it', async ({ page }) => {
   await expect(page).toHaveURL(new RegExp(`/work-orders/${JOB_ID}$`));
 });
 
-test('rejects an identifier that is not one', async ({ page }) => {
+test('refuses a name that was typed but never chosen', async ({ page }) => {
+  // The form looks filled in, and without this the API would be handed a name
+  // where an identifier belongs.
+  await stubCatalogue(page);
+
   await page.goto('/work-orders/new');
 
-  await page.getByLabel('Customer').fill('not-an-identifier');
+  await page.getByLabel('Customer').fill('Acme');
   await page.getByRole('button', { name: 'Raise the job' }).click();
 
-  await expect(page.getByText('Enter the identifier of an existing customer.')).toBeVisible();
+  await expect(page.getByText('Choose a customer from the list.')).toBeVisible();
+});
+
+test('offers nothing to choose from until a customer is picked', async ({ page }) => {
+  await stubCatalogue(page);
+
+  await page.goto('/work-orders/new');
+
+  await expect(page.getByLabel('Equipment')).toBeDisabled();
+  // The one option says why there is nothing to pick, rather than sitting empty.
+  await expect(page.getByLabel('Equipment').locator('option')).toHaveText([
+    /Choose a customer first/,
+  ]);
 });

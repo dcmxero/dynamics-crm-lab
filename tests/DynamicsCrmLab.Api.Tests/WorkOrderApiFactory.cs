@@ -113,20 +113,22 @@ internal sealed class InMemoryStore
     : IWorkOrderRepository, ICustomerRepository, IEquipmentRepository, ITechnicianRepository
 {
     private readonly Dictionary<Guid, WorkOrder> _workOrders = [];
+    private readonly HashSet<Guid> _raced = [];
+    private readonly Dictionary<string, Guid> _byRequestKey = new(StringComparer.Ordinal);
     private readonly Dictionary<Guid, Customer> _customers = [];
     private readonly Dictionary<Guid, Equipment> _equipment = [];
     private readonly Dictionary<Guid, Technician> _technicians = [];
 
-    public Customer AddCustomer()
+    public Customer AddCustomer(string name = "Acme Foods")
     {
-        var customer = new Customer(Guid.NewGuid(), "Acme Foods", "service@acme.example");
+        var customer = new Customer(Guid.NewGuid(), name, "service@acme.example");
         _customers[customer.Id] = customer;
         return customer;
     }
 
-    public Equipment AddEquipment(Guid customerId)
+    public Equipment AddEquipment(Guid customerId, string serialNumber = "SN-0001")
     {
-        var equipment = new Equipment(Guid.NewGuid(), "SN-0001", customerId);
+        var equipment = new Equipment(Guid.NewGuid(), serialNumber, customerId);
         _equipment[equipment.Id] = equipment;
         return equipment;
     }
@@ -144,10 +146,28 @@ internal sealed class InMemoryStore
         return workOrder;
     }
 
-    Task<Guid> IWorkOrderRepository.AddAsync(WorkOrder workOrder, CancellationToken cancellationToken)
+    /// <summary>
+    /// Makes the next write to this job behave as though somebody else had
+    /// changed it first.
+    /// </summary>
+    public void ChangedByEveryoneElse(Guid workOrderId) => _raced.Add(workOrderId);
+
+    Task<StoredWorkOrder> IWorkOrderRepository.AddAsync(
+        WorkOrder workOrder,
+        string requestKey,
+        CancellationToken cancellationToken)
     {
+        if (_byRequestKey.TryGetValue(requestKey, out var raisedEarlier))
+        {
+            var earlier = _workOrders[raisedEarlier];
+
+            return Task.FromResult(new StoredWorkOrder(earlier.Id, earlier.Number, WasRaisedNow: false));
+        }
+
         _workOrders[workOrder.Id] = workOrder;
-        return Task.FromResult(workOrder.Id);
+        _byRequestKey[requestKey] = workOrder.Id;
+
+        return Task.FromResult(new StoredWorkOrder(workOrder.Id, workOrder.Number, WasRaisedNow: true));
     }
 
     Task<WorkOrder?> IWorkOrderRepository.GetByIdAsync(Guid id, CancellationToken cancellationToken) =>
@@ -155,6 +175,11 @@ internal sealed class InMemoryStore
 
     Task IWorkOrderRepository.UpdateAsync(WorkOrder workOrder, CancellationToken cancellationToken)
     {
+        if (_raced.Remove(workOrder.Id))
+        {
+            throw new ConcurrencyException();
+        }
+
         _workOrders[workOrder.Id] = workOrder;
         return Task.CompletedTask;
     }
@@ -182,8 +207,41 @@ internal sealed class InMemoryStore
     Task<Customer?> ICustomerRepository.GetByIdAsync(Guid id, CancellationToken cancellationToken) =>
         Task.FromResult(_customers.GetValueOrDefault(id));
 
+    Task<IReadOnlyList<Customer>> ICustomerRepository.SearchAsync(
+        string? startingWith,
+        int maxCount,
+        CancellationToken cancellationToken)
+    {
+        IReadOnlyList<Customer> matching =
+        [
+            .. _customers.Values
+                .Where(customer => string.IsNullOrWhiteSpace(startingWith)
+                                   || customer.Name.StartsWith(startingWith, StringComparison.OrdinalIgnoreCase))
+                .OrderBy(customer => customer.Name, StringComparer.Ordinal)
+                .Take(maxCount)
+        ];
+
+        return Task.FromResult(matching);
+    }
+
     Task<Equipment?> IEquipmentRepository.GetByIdAsync(Guid id, CancellationToken cancellationToken) =>
         Task.FromResult(_equipment.GetValueOrDefault(id));
+
+    Task<IReadOnlyList<Equipment>> IEquipmentRepository.ListForCustomerAsync(
+        Guid customerId,
+        int maxCount,
+        CancellationToken cancellationToken)
+    {
+        IReadOnlyList<Equipment> owned =
+        [
+            .. _equipment.Values
+                .Where(equipment => equipment.CustomerId == customerId)
+                .OrderBy(equipment => equipment.SerialNumber, StringComparer.Ordinal)
+                .Take(maxCount)
+        ];
+
+        return Task.FromResult(owned);
+    }
 
     Task<Technician?> ITechnicianRepository.GetByIdAsync(Guid id, CancellationToken cancellationToken) =>
         Task.FromResult(_technicians.GetValueOrDefault(id));

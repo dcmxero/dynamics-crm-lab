@@ -122,6 +122,16 @@ internal sealed class SchemaProvisioner(
 
         await EnsureColumnAsync(
             WorkOrderSchema.EntityName,
+            metadata.Text(
+                "dcl_RequestKey",
+                "Request key",
+                "What the caller called the request that raised this job.",
+                maxLength: 100,
+                required: true),
+            cancellationToken).ConfigureAwait(false);
+
+        await EnsureColumnAsync(
+            WorkOrderSchema.EntityName,
             metadata.Currency(
                 "dcl_TotalPrice",
                 "Total price",
@@ -277,11 +287,38 @@ internal sealed class SchemaProvisioner(
 
     private async Task EnsureAlternateKeyAsync(MetadataFactory metadata, CancellationToken cancellationToken)
     {
+        // An alternate key lets an integration address a job by its number
+        // instead of a GUID it would otherwise have to look up first.
+        await EnsureKeyAsync(
+            metadata,
+            "dcl_WorkOrderNumber",
+            "Work order number",
+            WorkOrderSchema.Number,
+            cancellationToken).ConfigureAwait(false);
+
+        // And this one is what makes raising a job idempotent. Two requests
+        // carrying the same key cannot both become a job, and the platform
+        // enforces that rather than a check the second request could slip past.
+        await EnsureKeyAsync(
+            metadata,
+            "dcl_WorkOrderRequestKey",
+            "Work order request key",
+            WorkOrderSchema.RequestKey,
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task EnsureKeyAsync(
+        MetadataFactory metadata,
+        string schemaName,
+        string displayName,
+        string column,
+        CancellationToken cancellationToken)
+    {
         var table = await DescribeAsync(WorkOrderSchema.EntityName, cancellationToken).ConfigureAwait(false);
 
-        if (table?.Keys?.Any(key => key.SchemaName == "dcl_WorkOrderNumber") == true)
+        if (table?.Keys?.Any(key => key.SchemaName == schemaName) == true)
         {
-            ProvisioningLog.KeyExists(logger);
+            ProvisioningLog.KeyExists(logger, schemaName);
 
             return;
         }
@@ -293,16 +330,14 @@ internal sealed class SchemaProvisioner(
                 SolutionUniqueName = SolutionProvisioner.SolutionUniqueName,
                 EntityKey = new EntityKeyMetadata
                 {
-                    SchemaName = "dcl_WorkOrderNumber",
-                    DisplayName = metadata.Label("Work order number"),
-                    KeyAttributes = [WorkOrderSchema.Number]
+                    SchemaName = schemaName,
+                    DisplayName = metadata.Label(displayName),
+                    KeyAttributes = [column]
                 }
             },
             cancellationToken).ConfigureAwait(false);
 
-        // An alternate key lets an integration address a job by its number
-        // instead of a GUID it would otherwise have to look up first.
-        ProvisioningLog.KeyCreated(logger);
+        ProvisioningLog.KeyCreated(logger, schemaName);
     }
 
     private async Task EnsureTableAsync(

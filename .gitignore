@@ -17,3 +17,6 @@ appsettings.*.User.json
 
 # Local launch profiles: ports and environment are a developer's own business.
 **/Properties/launchSettings.json
+
+# One developer's own app registrations. Identifiers, not secrets, but theirs.
+web/src/environments/environment.local.ts

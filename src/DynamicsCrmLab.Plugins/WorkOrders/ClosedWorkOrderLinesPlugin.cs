@@ -25,6 +25,9 @@ namespace DynamicsCrmLab.Plugins.WorkOrders;
 /// one being closed is reason to refuse: the job it leaves ends up cheaper than
 /// what was agreed, the job it arrives at dearer.
 ///
+/// Deleting the job itself is not a change to what it cost. The platform
+/// removes the charges as a cascade of that, and this step stands aside for it.
+///
 /// PreOperation because a refusal has to stop the write.
 /// </remarks>
 public sealed class ClosedWorkOrderLinesPlugin() : PluginBase(nameof(ClosedWorkOrderLinesPlugin))
@@ -37,6 +40,16 @@ public sealed class ClosedWorkOrderLinesPlugin() : PluginBase(nameof(ClosedWorkO
         if (target is null
             || !string.Equals(target.LogicalName, WorkOrderLineSchema.EntityName, StringComparison.Ordinal))
         {
+            return;
+        }
+
+        // A job being removed takes its charges with it. Refusing that would
+        // not protect what the customer was told, it would only make a finished
+        // job impossible to remove at all.
+        if (context.IsCascadeOfDeleting(WorkOrderSchema.EntityName))
+        {
+            context.Tracing.Trace("{0}: the job itself is going, so its charges may go with it", PluginName);
+
             return;
         }
 
@@ -53,9 +66,10 @@ public sealed class ClosedWorkOrderLinesPlugin() : PluginBase(nameof(ClosedWorkO
             workOrderId,
             new ColumnSet(WorkOrderSchema.Status, WorkOrderSchema.Number));
 
-        var status = (WorkOrderStatus)job.GetAttributeValue<OptionSetValue>(WorkOrderSchema.Status).Value;
-
-        if (status is not WorkOrderStatus.Closed)
+        // A job with no stage at all is not a finished one, and a guard that
+        // threw here would make such a record impossible to correct or remove.
+        if (job.GetAttributeValue<OptionSetValue>(WorkOrderSchema.Status) is not { } status
+            || (WorkOrderStatus)status.Value is not WorkOrderStatus.Closed)
         {
             return;
         }

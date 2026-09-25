@@ -21,7 +21,7 @@ public sealed class StartWorkOrderHandlerTests
     {
         var workOrder = WorkOrder.Create(Guid.NewGuid(), Guid.NewGuid());
         workOrder.AssignTo(Guid.NewGuid());
-        await _workOrders.AddAsync(workOrder);
+        await _workOrders.AddAsync(workOrder, "test");
 
         var result = await _handler.HandleAsync(new StartWorkOrderCommand(workOrder.Id));
 
@@ -34,7 +34,7 @@ public sealed class StartWorkOrderHandlerTests
     public async Task HandleAsync_RefusesAJobNobodyIsOn()
     {
         var workOrder = WorkOrder.Create(Guid.NewGuid(), Guid.NewGuid());
-        await _workOrders.AddAsync(workOrder);
+        await _workOrders.AddAsync(workOrder, "test");
 
         var result = await _handler.HandleAsync(new StartWorkOrderCommand(workOrder.Id));
 

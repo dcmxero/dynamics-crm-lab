@@ -73,6 +73,34 @@ public sealed class PluginContext(
     public bool IsNested => Execution.Depth > 1;
 
     /// <summary>
+    /// Gets a value indicating whether this run is part of the platform
+    /// removing the record's parent along with it.
+    /// </summary>
+    /// <remarks>
+    /// A cascade carries the parent operation in the context above this one.
+    /// Telling it apart matters: a rule that protects the children of a record
+    /// has nothing to say when the record itself is going.
+    /// </remarks>
+    /// <param name="parentEntityName">The logical name of the parent table.</param>
+    /// <returns><see langword="true"/> when the parent is being deleted.</returns>
+    public bool IsCascadeOfDeleting(string parentEntityName)
+    {
+        // The chain is walked rather than only its first link: how many
+        // contexts the platform puts between the two operations is its own
+        // business, and it has been more than one.
+        for (var above = Execution.ParentContext; above is not null; above = above.ParentContext)
+        {
+            if (string.Equals(above.MessageName, "Delete", StringComparison.Ordinal)
+                && string.Equals(above.PrimaryEntityName, parentEntityName, StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
     /// Returns a registered image of the record as it was before the operation.
     /// </summary>
     /// <param name="name">The name the image was registered under.</param>

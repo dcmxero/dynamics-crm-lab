@@ -253,6 +253,46 @@
             <Description description="The reference quoted to the customer." languagecode="1051" />
           </Descriptions>
         </attribute>
+        <attribute PhysicalName="dcl_RequestKey">
+          <Type>nvarchar</Type>
+          <Name>dcl_requestkey</Name>
+          <LogicalName>dcl_requestkey</LogicalName>
+          <RequiredLevel>required</RequiredLevel>
+          <DisplayMask>ValidForAdvancedFind|ValidForForm|ValidForGrid</DisplayMask>
+          <ImeMode>auto</ImeMode>
+          <ValidForUpdateApi>1</ValidForUpdateApi>
+          <ValidForReadApi>1</ValidForReadApi>
+          <ValidForCreateApi>1</ValidForCreateApi>
+          <IsCustomField>1</IsCustomField>
+          <IsAuditEnabled>1</IsAuditEnabled>
+          <IsSecured>0</IsSecured>
+          <IntroducedVersion>1.0.0.0</IntroducedVersion>
+          <IsCustomizable>1</IsCustomizable>
+          <IsRenameable>1</IsRenameable>
+          <CanModifySearchSettings>1</CanModifySearchSettings>
+          <CanModifyRequirementLevelSettings>1</CanModifyRequirementLevelSettings>
+          <CanModifyAdditionalSettings>1</CanModifyAdditionalSettings>
+          <SourceType>0</SourceType>
+          <IsGlobalFilterEnabled>0</IsGlobalFilterEnabled>
+          <IsSortableEnabled>0</IsSortableEnabled>
+          <CanModifyGlobalFilterSettings>1</CanModifyGlobalFilterSettings>
+          <CanModifyIsSortableSettings>1</CanModifyIsSortableSettings>
+          <IsDataSourceSecret>0</IsDataSourceSecret>
+          <AutoNumberFormat></AutoNumberFormat>
+          <IsSearchable>0</IsSearchable>
+          <IsFilterable>0</IsFilterable>
+          <IsRetrievable>0</IsRetrievable>
+          <IsLocalizable>0</IsLocalizable>
+          <Format>text</Format>
+          <MaxLength>100</MaxLength>
+          <Length>200</Length>
+          <displaynames>
+            <displayname description="Request key" languagecode="1051" />
+          </displaynames>
+          <Descriptions>
+            <Description description="What the caller called the request that raised this job." languagecode="1051" />
+          </Descriptions>
+        </attribute>
         <attribute PhysicalName="dcl_Resolution">
           <Type>ntext</Type>
           <Name>dcl_resolution</Name>
@@ -1182,6 +1222,18 @@
           </EntityKeyAttributes>
           <displaynames>
             <displayname description="Work order number" languagecode="1051" />
+          </displaynames>
+        </EntityKey>
+        <EntityKey>
+          <Name>dcl_WorkOrderRequestKey</Name>
+          <LogicalName>dcl_workorderrequestkey</LogicalName>
+          <IntroducedVersion>1.0.0.0</IntroducedVersion>
+          <IsCustomizable>0</IsCustomizable>
+          <EntityKeyAttributes>
+            <AttributeName>dcl_requestkey</AttributeName>
+          </EntityKeyAttributes>
+          <displaynames>
+            <displayname description="Work order request key" languagecode="1051" />
           </displaynames>
         </EntityKey>
       </EntityKeys>

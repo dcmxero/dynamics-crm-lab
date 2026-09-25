@@ -48,13 +48,15 @@ internal static class WorkOrderMapper
     /// <param name="workOrder">The work order to store.</param>
     /// <param name="currencyId">The currency the money on the job is held in.</param>
     /// <returns>A complete work order row.</returns>
-    public static Entity ToRecord(WorkOrder workOrder, Guid currencyId)
+    /// <param name="requestKey">What the caller called the request that raised it.</param>
+    public static Entity ToRecord(WorkOrder workOrder, Guid currencyId, string requestKey)
     {
         ArgumentNullException.ThrowIfNull(workOrder);
 
         return new Entity(WorkOrderSchema.EntityName, workOrder.Id)
         {
             [WorkOrderSchema.Number] = workOrder.Number,
+            [WorkOrderSchema.RequestKey] = requestKey,
             [WorkOrderSchema.Customer] = new EntityReference(ContactSchema.EntityName, workOrder.CustomerId),
             [WorkOrderSchema.Equipment] = new EntityReference(EquipmentSchema.EntityName, workOrder.EquipmentId),
             [WorkOrderSchema.Status] = new OptionSetValue((int)workOrder.Status),

@@ -49,7 +49,7 @@ public sealed class DataverseWorkOrderRepositoryTests
         workOrder.AddLine("Technician labour", 2, DomainMoney.Of(45m));
         workOrder.AddLine("Filter", 1, DomainMoney.Of(30m));
 
-        await _repository.AddAsync(workOrder);
+        await _repository.AddAsync(workOrder, "test");
 
         // One request, not three: a job and its charges are written together or
         // not at all.

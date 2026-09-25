@@ -80,7 +80,7 @@ public sealed class WorkOrderMapperTests
     {
         var workOrder = WorkOrder.Create(CustomerId, EquipmentId);
 
-        var record = WorkOrderMapper.ToRecord(workOrder, Guid.NewGuid());
+        var record = WorkOrderMapper.ToRecord(workOrder, Guid.NewGuid(), "test");
 
         record.GetAttributeValue<EntityReference>(WorkOrderSchema.Customer).Id.Should().Be(CustomerId);
         record.GetAttributeValue<EntityReference>(WorkOrderSchema.Equipment).Id.Should().Be(EquipmentId);

@@ -16,6 +16,7 @@ builder.Services.AddWorkOrderUseCases();
 builder.Services.AddDataverse(builder.Configuration);
 
 builder.Services.AddScoped<ICliCommand, WhoAmICommand>();
+builder.Services.AddScoped<ICliCommand, SeedCommand>();
 builder.Services.AddScoped<ICliCommand, RaiseCommand>();
 builder.Services.AddScoped<ICliCommand, AssignCommand>();
 builder.Services.AddScoped<ICliCommand, StartCommand>();
