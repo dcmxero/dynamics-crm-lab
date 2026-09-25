@@ -24,6 +24,7 @@ builder.Services.AddOpenApi();
 // Failures come back as problem details, so the client has one shape to handle
 // rather than a mix of plain text, HTML and JSON.
 builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<StaleRecordHandler>();
 builder.Services.AddExceptionHandler<MalformedRequestHandler>();
 
 const string AngularDevServer = "angular-dev-server";

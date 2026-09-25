@@ -41,10 +41,16 @@ public static class WorkOrderSchema
     public const string TotalPrice = "dcl_totalprice";
 
     /// <summary>
+    /// The row version the platform stamps on every change, used to tell a
+    /// write that lost a race from one that did not.
+    /// </summary>
+    public const string RowVersion = "versionnumber";
+
+    /// <summary>
     /// Gets the columns needed to rebuild the aggregate.
     /// </summary>
     public static IReadOnlyList<string> ReadColumns { get; } =
-        [Id, Number, Customer, Equipment, Technician, Status, Resolution, Currency];
+        [Id, Number, Customer, Equipment, Technician, Status, Resolution, Currency, RowVersion];
 }
 
 /// <summary>

@@ -1,3 +1,4 @@
+using System.ServiceModel;
 using DynamicsCrmLab.Application.Abstractions;
 using DynamicsCrmLab.Domain.WorkOrders;
 using DynamicsCrmLab.Infrastructure.Dataverse.Mapping;
@@ -24,6 +25,17 @@ public sealed class DataverseWorkOrderRepository(IDataverseClient client, Datave
     /// caller asks for.
     /// </summary>
     private const int MaxPageSize = 5000;
+
+    /// <summary>
+    /// The version each job carried when this request read it.
+    /// </summary>
+    /// <remarks>
+    /// The version belongs to the row, not to the job: it says nothing a
+    /// technician or a customer would recognise, so it is kept here rather than
+    /// carried through the domain. One repository serves one request, which is
+    /// exactly the span between reading a job and writing it back.
+    /// </remarks>
+    private readonly Dictionary<Guid, string> _versionsRead = [];
 
     /// <inheritdoc/>
     public async Task<Guid> AddAsync(WorkOrder workOrder, CancellationToken cancellationToken = default)
@@ -72,6 +84,11 @@ public sealed class DataverseWorkOrderRepository(IDataverseClient client, Datave
             return null;
         }
 
+        if (record.RowVersion is { } version)
+        {
+            _versionsRead[id] = version;
+        }
+
         var lines = await ReadLinesAsync(id, cancellationToken).ConfigureAwait(false);
         var currency = await CurrencyOfAsync(record, cancellationToken).ConfigureAwait(false);
 
@@ -79,11 +96,41 @@ public sealed class DataverseWorkOrderRepository(IDataverseClient client, Datave
     }
 
     /// <inheritdoc/>
-    public Task UpdateAsync(WorkOrder workOrder, CancellationToken cancellationToken = default)
+    public async Task UpdateAsync(WorkOrder workOrder, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(workOrder);
 
-        return client.UpdateAsync(WorkOrderMapper.ToUpdateRecord(workOrder), cancellationToken);
+        var record = WorkOrderMapper.ToUpdateRecord(workOrder);
+
+        if (!_versionsRead.TryGetValue(workOrder.Id, out var versionRead))
+        {
+            // Nothing was read, so there is nothing this write could be racing
+            // against. Insisting on a version here would refuse writes that are
+            // not concurrent at all.
+            await client.UpdateAsync(record, cancellationToken).ConfigureAwait(false);
+
+            return;
+        }
+
+        record.RowVersion = versionRead;
+
+        var update = new UpdateRequest
+        {
+            Target = record,
+            ConcurrencyBehavior = ConcurrencyBehavior.IfRowVersionMatches
+        };
+
+        try
+        {
+            await client.ExecuteAsync(update, cancellationToken).ConfigureAwait(false);
+        }
+        catch (FaultException<OrganizationServiceFault> fault) when (DataverseFault.IsStale(fault))
+        {
+            throw new ConcurrencyException(
+                "Somebody else changed this work order while you were working on it. "
+                + "Read it again and retry.",
+                fault);
+        }
     }
 
     /// <inheritdoc/>

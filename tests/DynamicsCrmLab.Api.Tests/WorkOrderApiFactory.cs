@@ -113,6 +113,7 @@ internal sealed class InMemoryStore
     : IWorkOrderRepository, ICustomerRepository, IEquipmentRepository, ITechnicianRepository
 {
     private readonly Dictionary<Guid, WorkOrder> _workOrders = [];
+    private readonly HashSet<Guid> _raced = [];
     private readonly Dictionary<Guid, Customer> _customers = [];
     private readonly Dictionary<Guid, Equipment> _equipment = [];
     private readonly Dictionary<Guid, Technician> _technicians = [];
@@ -144,6 +145,12 @@ internal sealed class InMemoryStore
         return workOrder;
     }
 
+    /// <summary>
+    /// Makes the next write to this job behave as though somebody else had
+    /// changed it first.
+    /// </summary>
+    public void ChangedByEveryoneElse(Guid workOrderId) => _raced.Add(workOrderId);
+
     Task<Guid> IWorkOrderRepository.AddAsync(WorkOrder workOrder, CancellationToken cancellationToken)
     {
         _workOrders[workOrder.Id] = workOrder;
@@ -155,6 +162,11 @@ internal sealed class InMemoryStore
 
     Task IWorkOrderRepository.UpdateAsync(WorkOrder workOrder, CancellationToken cancellationToken)
     {
+        if (_raced.Remove(workOrder.Id))
+        {
+            throw new ConcurrencyException();
+        }
+
         _workOrders[workOrder.Id] = workOrder;
         return Task.CompletedTask;
     }

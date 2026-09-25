@@ -17,6 +17,25 @@ public sealed class DataverseFaultTests
     }
 
     [Fact]
+    public void IsStale_RecognisesTheCodeALostRaceComesBackAs()
+    {
+        // Taken from the platform rather than from documentation: an
+        // environment was made to lose the race on purpose and this is what it
+        // answered with.
+        var fault = Fault(unchecked((int)0x80060882));
+
+        DataverseFault.IsStale(fault).Should().BeTrue();
+    }
+
+    [Fact]
+    public void IsStale_LeavesARefusalAlone()
+    {
+        var fault = Fault(unchecked((int)0x80040265));
+
+        DataverseFault.IsStale(fault).Should().BeFalse();
+    }
+
+    [Fact]
     public void IsRecordNotFound_LeavesEveryOtherFailureAlone()
     {
         // 0x80040265 is a plug-in reporting a business rule, which must keep
