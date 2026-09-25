@@ -105,6 +105,41 @@ public sealed class ClosedWorkOrderLinesPluginTests
     }
 
     [Fact]
+    public void Execute_LetsTheChargesGoWhenTheClosedJobItselfIsBeingRemoved()
+    {
+        // Refusing this protects nothing: the job is going, so what it cost is
+        // going with it. It would only make a finished job impossible to remove.
+        var workOrderId = Guid.NewGuid();
+        var context = ContextWith(workOrderId, Closed);
+
+        var removing = () => Run(
+            context,
+            new EntityReference(WorkOrderLine, Guid.NewGuid()),
+            LineOf(workOrderId),
+            "Delete",
+            cascadeOf: WorkOrder);
+
+        removing.Should().NotThrow();
+    }
+
+    [Fact]
+    public void Execute_StillRefusesAChargeRemovedOnItsOwn()
+    {
+        var workOrderId = Guid.NewGuid();
+        var context = ContextWith(workOrderId, Closed);
+
+        var removing = () => Run(
+            context,
+            new EntityReference(WorkOrderLine, Guid.NewGuid()),
+            LineOf(workOrderId),
+            "Delete",
+            cascadeOf: null);
+
+        removing.Should().Throw<InvalidPluginExecutionException>()
+            .WithMessage("*is closed*");
+    }
+
+    [Fact]
     public void Execute_LeavesAJobThatIsStillRunningAlone()
     {
         var adding = () => RunPlugin(InProgress, line => line, message: "Create");
@@ -161,13 +196,26 @@ public sealed class ClosedWorkOrderLinesPluginTests
             ["dcl_status"] = new OptionSetValue(status)
         };
 
-    private static void Run(XrmFakedContext context, object target, Entity? preImage, string message)
+    private static void Run(
+        XrmFakedContext context,
+        object target,
+        Entity? preImage,
+        string message,
+        string? cascadeOf = null)
     {
         var pluginContext = context.GetDefaultPluginContext();
         pluginContext.MessageName = message;
         pluginContext.Stage = 20;
         pluginContext.Depth = 1;
         pluginContext.InputParameters = new ParameterCollection { { "Target", target } };
+
+        if (cascadeOf != null)
+        {
+            var parent = context.GetDefaultPluginContext();
+            parent.MessageName = "Delete";
+            parent.PrimaryEntityName = cascadeOf;
+            pluginContext.ParentContext = parent;
+        }
 
         if (preImage != null)
         {

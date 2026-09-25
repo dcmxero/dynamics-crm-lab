@@ -51,6 +51,15 @@ public sealed class WorkOrderPricingPlugin() : PluginBase(nameof(WorkOrderPricin
             return;
         }
 
+        // The charges of a job being removed are removed with it. There is no
+        // total to write, because there will be no job to write it on.
+        if (context.IsCascadeOfDeleting(WorkOrderSchema.EntityName))
+        {
+            context.Tracing.Trace("{0}: the job itself is going, nothing to total", PluginName);
+
+            return;
+        }
+
         var workOrderIds = WorkOrderIdsOf(context);
         if (workOrderIds.Count == 0)
         {
