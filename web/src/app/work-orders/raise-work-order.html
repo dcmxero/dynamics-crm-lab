@@ -3,17 +3,53 @@
 <form [formGroup]="form" (ngSubmit)="submit()" class="form">
   <mat-form-field appearance="outline">
     <mat-label>Customer</mat-label>
-    <input matInput formControlName="customerId" placeholder="Identifier of the contact" />
-    @if (form.controls.customerId.touched && form.controls.customerId.invalid) {
-      <mat-error>Enter the identifier of an existing customer.</mat-error>
+    <input
+      matInput
+      formControlName="customer"
+      [matAutocomplete]="customerList"
+      placeholder="Start typing a name"
+      autocomplete="off"
+    />
+    <mat-autocomplete
+      #customerList="matAutocomplete"
+      [displayWith]="nameOf"
+      (optionSelected)="chosen($event.option.value)"
+    >
+      @for (option of customers(); track option.id) {
+        <mat-option [value]="option">
+          <span>{{ option.name }}</span>
+          <small class="hint">{{ option.email }}</small>
+        </mat-option>
+      }
+    </mat-autocomplete>
+    @if (searching()) {
+      <mat-hint>Searching…</mat-hint>
+    }
+    @if (form.controls.customer.touched && form.controls.customer.invalid) {
+      <mat-error>Choose a customer from the list.</mat-error>
     }
   </mat-form-field>
 
   <mat-form-field appearance="outline">
     <mat-label>Equipment</mat-label>
-    <input matInput formControlName="equipmentId" placeholder="Identifier of the unit" />
+    <select matNativeControl formControlName="equipmentId">
+      <option value="">
+        @if (customer() === null) {
+          Choose a customer first
+        } @else if (loadingEquipment()) {
+          Loading…
+        } @else if (equipment().length === 0) {
+          Nothing is registered to this customer
+        } @else {
+          Choose a unit
+        }
+      </option>
+      @for (unit of equipment(); track unit.id) {
+        <option [value]="unit.id">{{ unit.serialNumber }}</option>
+      }
+    </select>
     @if (form.controls.equipmentId.touched && form.controls.equipmentId.invalid) {
-      <mat-error>Enter the identifier of an existing piece of equipment.</mat-error>
+      <mat-error>Choose the unit the job is about.</mat-error>
     }
   </mat-form-field>
 
