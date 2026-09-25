@@ -117,16 +117,16 @@ internal sealed class InMemoryStore
     private readonly Dictionary<Guid, Equipment> _equipment = [];
     private readonly Dictionary<Guid, Technician> _technicians = [];
 
-    public Customer AddCustomer()
+    public Customer AddCustomer(string name = "Acme Foods")
     {
-        var customer = new Customer(Guid.NewGuid(), "Acme Foods", "service@acme.example");
+        var customer = new Customer(Guid.NewGuid(), name, "service@acme.example");
         _customers[customer.Id] = customer;
         return customer;
     }
 
-    public Equipment AddEquipment(Guid customerId)
+    public Equipment AddEquipment(Guid customerId, string serialNumber = "SN-0001")
     {
-        var equipment = new Equipment(Guid.NewGuid(), "SN-0001", customerId);
+        var equipment = new Equipment(Guid.NewGuid(), serialNumber, customerId);
         _equipment[equipment.Id] = equipment;
         return equipment;
     }
@@ -182,8 +182,41 @@ internal sealed class InMemoryStore
     Task<Customer?> ICustomerRepository.GetByIdAsync(Guid id, CancellationToken cancellationToken) =>
         Task.FromResult(_customers.GetValueOrDefault(id));
 
+    Task<IReadOnlyList<Customer>> ICustomerRepository.SearchAsync(
+        string? startingWith,
+        int maxCount,
+        CancellationToken cancellationToken)
+    {
+        IReadOnlyList<Customer> matching =
+        [
+            .. _customers.Values
+                .Where(customer => string.IsNullOrWhiteSpace(startingWith)
+                                   || customer.Name.StartsWith(startingWith, StringComparison.OrdinalIgnoreCase))
+                .OrderBy(customer => customer.Name, StringComparer.Ordinal)
+                .Take(maxCount)
+        ];
+
+        return Task.FromResult(matching);
+    }
+
     Task<Equipment?> IEquipmentRepository.GetByIdAsync(Guid id, CancellationToken cancellationToken) =>
         Task.FromResult(_equipment.GetValueOrDefault(id));
+
+    Task<IReadOnlyList<Equipment>> IEquipmentRepository.ListForCustomerAsync(
+        Guid customerId,
+        int maxCount,
+        CancellationToken cancellationToken)
+    {
+        IReadOnlyList<Equipment> owned =
+        [
+            .. _equipment.Values
+                .Where(equipment => equipment.CustomerId == customerId)
+                .OrderBy(equipment => equipment.SerialNumber, StringComparer.Ordinal)
+                .Take(maxCount)
+        ];
+
+        return Task.FromResult(owned);
+    }
 
     Task<Technician?> ITechnicianRepository.GetByIdAsync(Guid id, CancellationToken cancellationToken) =>
         Task.FromResult(_technicians.GetValueOrDefault(id));

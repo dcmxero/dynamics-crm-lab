@@ -32,6 +32,37 @@ public sealed class DataverseCustomerRepository(IDataverseClient client) : ICust
                 record.GetAttributeValue<string>(ContactSchema.FullName) ?? "(unnamed)",
                 record.GetAttributeValue<string>(ContactSchema.Email) ?? string.Empty);
     }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<Customer>> SearchAsync(
+        string? startingWith,
+        int maxCount,
+        CancellationToken cancellationToken = default)
+    {
+        var query = new QueryExpression(ContactSchema.EntityName)
+        {
+            ColumnSet = new ColumnSet([.. ContactSchema.ReadColumns]),
+            TopCount = maxCount,
+            Orders = { new OrderExpression(ContactSchema.FullName, OrderType.Ascending) }
+        };
+
+        if (!string.IsNullOrWhiteSpace(startingWith))
+        {
+            // BeginsWith rather than Like: the caller is typing a name, not
+            // writing a pattern, so a % they happen to type is a character.
+            query.Criteria.AddCondition(
+                ContactSchema.FullName,
+                ConditionOperator.BeginsWith,
+                startingWith);
+        }
+
+        var page = await client.RetrieveMultipleAsync(query, cancellationToken).ConfigureAwait(false);
+
+        return [.. page.Entities.Select(record => new Customer(
+            record.Id,
+            record.GetAttributeValue<string>(ContactSchema.FullName) ?? "(unnamed)",
+            record.GetAttributeValue<string>(ContactSchema.Email) ?? string.Empty))];
+    }
 }
 
 /// <summary>
@@ -57,6 +88,34 @@ public sealed class DataverseEquipmentRepository(IDataverseClient client) : IEqu
                 record.Id,
                 record.GetAttributeValue<string>(EquipmentSchema.SerialNumber) ?? "(no serial number)",
                 record.GetAttributeValue<EntityReference>(EquipmentSchema.Customer)?.Id ?? Guid.Empty);
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<Equipment>> ListForCustomerAsync(
+        Guid customerId,
+        int maxCount,
+        CancellationToken cancellationToken = default)
+    {
+        var query = new QueryExpression(EquipmentSchema.EntityName)
+        {
+            ColumnSet = new ColumnSet([.. EquipmentSchema.ReadColumns]),
+            TopCount = maxCount,
+            Orders = { new OrderExpression(EquipmentSchema.SerialNumber, OrderType.Ascending) },
+            Criteria =
+            {
+                Conditions =
+                {
+                    new ConditionExpression(EquipmentSchema.Customer, ConditionOperator.Equal, customerId)
+                }
+            }
+        };
+
+        var page = await client.RetrieveMultipleAsync(query, cancellationToken).ConfigureAwait(false);
+
+        return [.. page.Entities.Select(record => new Equipment(
+            record.Id,
+            record.GetAttributeValue<string>(EquipmentSchema.SerialNumber) ?? "(no serial number)",
+            record.GetAttributeValue<EntityReference>(EquipmentSchema.Customer)?.Id ?? Guid.Empty))];
     }
 }
 

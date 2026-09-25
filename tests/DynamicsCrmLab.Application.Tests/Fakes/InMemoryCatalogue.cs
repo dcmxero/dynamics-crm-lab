@@ -17,6 +17,23 @@ internal sealed class InMemoryCustomerRepository : ICustomerRepository
 
     public Task<Customer?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
         Task.FromResult(_stored.GetValueOrDefault(id));
+
+    public Task<IReadOnlyList<Customer>> SearchAsync(
+        string? startingWith,
+        int maxCount,
+        CancellationToken cancellationToken = default)
+    {
+        IReadOnlyList<Customer> matching =
+        [
+            .. _stored.Values
+                .Where(customer => string.IsNullOrWhiteSpace(startingWith)
+                                   || customer.Name.StartsWith(startingWith, StringComparison.OrdinalIgnoreCase))
+                .OrderBy(customer => customer.Name, StringComparer.Ordinal)
+                .Take(maxCount)
+        ];
+
+        return Task.FromResult(matching);
+    }
 }
 
 internal sealed class InMemoryEquipmentRepository : IEquipmentRepository
@@ -32,4 +49,20 @@ internal sealed class InMemoryEquipmentRepository : IEquipmentRepository
 
     public Task<Equipment?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
         Task.FromResult(_stored.GetValueOrDefault(id));
+
+    public Task<IReadOnlyList<Equipment>> ListForCustomerAsync(
+        Guid customerId,
+        int maxCount,
+        CancellationToken cancellationToken = default)
+    {
+        IReadOnlyList<Equipment> owned =
+        [
+            .. _stored.Values
+                .Where(equipment => equipment.CustomerId == customerId)
+                .OrderBy(equipment => equipment.SerialNumber, StringComparer.Ordinal)
+                .Take(maxCount)
+        ];
+
+        return Task.FromResult(owned);
+    }
 }

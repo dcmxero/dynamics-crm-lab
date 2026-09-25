@@ -1,4 +1,5 @@
 using DynamicsCrmLab.Api;
+using DynamicsCrmLab.Api.Catalogue;
 using DynamicsCrmLab.Api.WorkOrders;
 using DynamicsCrmLab.Infrastructure;
 using Microsoft.Identity.Web;
@@ -48,6 +49,7 @@ if (app.Environment.IsDevelopment())
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.MapCatalogue();
 app.MapWorkOrders();
 
 await app.RunAsync().ConfigureAwait(false);
