@@ -1,10 +1,18 @@
 import { Environment } from './environment.model';
 
+/**
+ * How this client is built when nothing local says otherwise.
+ *
+ * No tenant, because the registrations belong to whoever set the lab up and a
+ * checkout carrying them would send somebody else's browser somewhere it has no
+ * business going. A fresh clone therefore runs without signing in, which is
+ * enough to see the client work against a stubbed API.
+ *
+ * To run it against a real environment, copy environment.local.example.ts to
+ * environment.local.ts, fill in your own two registrations, and start with
+ * `npm run start:tenant`. That file is not committed. The identifiers in it are
+ * not secrets, but they are yours.
+ */
 export const environment: Environment = {
-  signIn: {
-    clientId: 'c610cdab-0e52-46bb-b616-6997e7a33ffd',
-    authority: 'https://login.microsoftonline.com/1589213a-daaf-496c-b68b-a2ac535a84f5',
-    redirectUri: 'http://localhost:4200',
-    apiScope: 'api://0d5314ae-13c3-410a-93dd-871796bbbe3e/access_as_user',
-  },
+  signIn: null,
 };
