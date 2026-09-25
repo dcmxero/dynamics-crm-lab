@@ -94,7 +94,7 @@ public sealed class AssignWorkOrderHandlerTests
     private async Task<WorkOrder> StoredWorkOrderAsync()
     {
         var workOrder = WorkOrder.Create(Guid.NewGuid(), Guid.NewGuid());
-        await _workOrders.AddAsync(workOrder);
+        await _workOrders.AddAsync(workOrder, "test");
         return workOrder;
     }
 }

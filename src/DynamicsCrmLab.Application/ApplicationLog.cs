@@ -19,6 +19,12 @@ internal static partial class ApplicationLog
     public static partial void WorkOrderRaised(ILogger logger, string number, Guid customerId);
 
     [LoggerMessage(
+        EventId = 1009,
+        Level = LogLevel.Information,
+        Message = "Request {RequestKey} had already raised work order {Number}, so nothing was raised.")]
+    public static partial void WorkOrderAlreadyRaised(ILogger logger, string requestKey, string number);
+
+    [LoggerMessage(
         EventId = 1001,
         Level = LogLevel.Warning,
         Message = "Work order for customer {CustomerId} was rejected: {Reason}")]

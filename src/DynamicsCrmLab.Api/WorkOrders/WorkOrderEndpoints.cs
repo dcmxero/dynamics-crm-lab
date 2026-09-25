@@ -98,6 +98,7 @@ internal static class WorkOrderEndpoints
     private static async Task<IResult> RaiseAsync(
         RaiseWorkOrderHandler handler,
         RaiseWorkOrderRequest request,
+        HttpContext httpContext,
         CancellationToken cancellationToken)
     {
         if (Missing(request) is { } missing)
@@ -108,7 +109,8 @@ internal static class WorkOrderEndpoints
         var command = new RaiseWorkOrderCommand(
             request.CustomerId,
             request.EquipmentId,
-            [.. request.Lines.Select(line => new WorkOrderLineInput(line.Description, line.Quantity, line.UnitPrice))]);
+            [.. request.Lines.Select(line => new WorkOrderLineInput(line.Description, line.Quantity, line.UnitPrice))],
+            RequestKeyOf(httpContext));
 
         var result = await handler.HandleAsync(command, cancellationToken).ConfigureAwait(false);
 
@@ -119,8 +121,25 @@ internal static class WorkOrderEndpoints
 
         var raised = result.Value!;
 
-        return TypedResults.Created($"/api/work-orders/{raised.WorkOrderId}", raised.ToResponse());
+        // A repeat raised nothing, so it is not answered as though it had.
+        // 200 with the job the first request raised is the truthful answer, and
+        // a client that timed out and retried gets one job either way.
+        return raised.WasRaisedNow
+            ? TypedResults.Created($"/api/work-orders/{raised.WorkOrderId}", raised.ToResponse())
+            : TypedResults.Ok(raised.ToResponse());
     }
+
+    /// <summary>
+    /// Reads what the caller called this request.
+    /// </summary>
+    /// <remarks>
+    /// Idempotency-Key is the header the wider world uses for this, so a client
+    /// library that already knows the idea needs no arrangement of ours.
+    /// </remarks>
+    private static string? RequestKeyOf(HttpContext httpContext) =>
+        httpContext.Request.Headers.TryGetValue("Idempotency-Key", out var key)
+            ? key.ToString()
+            : null;
 
     private static async Task<IResult> AssignAsync(
         AssignWorkOrderHandler handler,

@@ -114,6 +114,7 @@ internal sealed class InMemoryStore
 {
     private readonly Dictionary<Guid, WorkOrder> _workOrders = [];
     private readonly HashSet<Guid> _raced = [];
+    private readonly Dictionary<string, Guid> _byRequestKey = new(StringComparer.Ordinal);
     private readonly Dictionary<Guid, Customer> _customers = [];
     private readonly Dictionary<Guid, Equipment> _equipment = [];
     private readonly Dictionary<Guid, Technician> _technicians = [];
@@ -151,10 +152,22 @@ internal sealed class InMemoryStore
     /// </summary>
     public void ChangedByEveryoneElse(Guid workOrderId) => _raced.Add(workOrderId);
 
-    Task<Guid> IWorkOrderRepository.AddAsync(WorkOrder workOrder, CancellationToken cancellationToken)
+    Task<StoredWorkOrder> IWorkOrderRepository.AddAsync(
+        WorkOrder workOrder,
+        string requestKey,
+        CancellationToken cancellationToken)
     {
+        if (_byRequestKey.TryGetValue(requestKey, out var raisedEarlier))
+        {
+            var earlier = _workOrders[raisedEarlier];
+
+            return Task.FromResult(new StoredWorkOrder(earlier.Id, earlier.Number, WasRaisedNow: false));
+        }
+
         _workOrders[workOrder.Id] = workOrder;
-        return Task.FromResult(workOrder.Id);
+        _byRequestKey[requestKey] = workOrder.Id;
+
+        return Task.FromResult(new StoredWorkOrder(workOrder.Id, workOrder.Number, WasRaisedNow: true));
     }
 
     Task<WorkOrder?> IWorkOrderRepository.GetByIdAsync(Guid id, CancellationToken cancellationToken) =>

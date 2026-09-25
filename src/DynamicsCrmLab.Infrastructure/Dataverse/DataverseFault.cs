@@ -58,6 +58,18 @@ public static class DataverseFault
     public static bool IsStale(FaultException<OrganizationServiceFault>? exception) =>
         exception?.Detail?.ErrorCode == ConcurrencyVersionMismatch;
 
+    /// <summary>
+    /// Reports whether a fault says a record already exists under a key this
+    /// one tried to claim.
+    /// </summary>
+    /// <param name="exception">The fault the platform raised.</param>
+    /// <returns>
+    /// <see langword="true"/> when an alternate key was already taken;
+    /// otherwise <see langword="false"/>.
+    /// </returns>
+    public static bool IsDuplicateKey(FaultException<OrganizationServiceFault>? exception) =>
+        exception?.Detail?.ErrorCode == DuplicateRecord;
+
     /// <summary>The code the platform returns for a value a column will not hold.</summary>
     private const int ValueOutOfRange = unchecked((int)0x8004432F);
 
@@ -66,4 +78,7 @@ public static class DataverseFault
 
     /// <summary>The code the platform returns when the row version no longer matches.</summary>
     private const int ConcurrencyVersionMismatch = unchecked((int)0x80060882);
+
+    /// <summary>The code the platform returns when an alternate key is already taken.</summary>
+    private const int DuplicateRecord = unchecked((int)0x80060892);
 }

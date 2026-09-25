@@ -38,9 +38,13 @@ public sealed class DataverseWorkOrderRepository(IDataverseClient client, Datave
     private readonly Dictionary<Guid, string> _versionsRead = [];
 
     /// <inheritdoc/>
-    public async Task<Guid> AddAsync(WorkOrder workOrder, CancellationToken cancellationToken = default)
+    public async Task<StoredWorkOrder> AddAsync(
+        WorkOrder workOrder,
+        string requestKey,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(workOrder);
+        ArgumentException.ThrowIfNullOrWhiteSpace(requestKey);
 
         var (currencyId, _) = await currencies.BaseAsync(cancellationToken).ConfigureAwait(false);
 
@@ -50,7 +54,7 @@ public sealed class DataverseWorkOrderRepository(IDataverseClient client, Datave
         // is missing what it costs, and a plug-in would have totalled it.
         var writes = new OrganizationRequestCollection
         {
-            new CreateRequest { Target = WorkOrderMapper.ToRecord(workOrder, currencyId) }
+            new CreateRequest { Target = WorkOrderMapper.ToRecord(workOrder, currencyId, requestKey) }
         };
 
         foreach (var line in workOrder.Lines)
@@ -61,11 +65,57 @@ public sealed class DataverseWorkOrderRepository(IDataverseClient client, Datave
             });
         }
 
-        await client.ExecuteAsync(
-            new ExecuteTransactionRequest { Requests = writes, ReturnResponses = false },
+        try
+        {
+            await client.ExecuteAsync(
+                new ExecuteTransactionRequest { Requests = writes, ReturnResponses = false },
+                cancellationToken).ConfigureAwait(false);
+        }
+        catch (FaultException<OrganizationServiceFault> fault) when (DataverseFault.IsDuplicateKey(fault))
+        {
+            // The same request arrived before and the job it raised is the
+            // answer to this one. The key is unique in the store, so the second
+            // request cannot have slipped past a check: it was refused.
+            return await RaisedEarlierAsync(requestKey, cancellationToken).ConfigureAwait(false);
+        }
+
+        return new StoredWorkOrder(workOrder.Id, workOrder.Number, WasRaisedNow: true);
+    }
+
+    /// <summary>
+    /// Reads the job an earlier request with this key raised.
+    /// </summary>
+    private async Task<StoredWorkOrder> RaisedEarlierAsync(string requestKey, CancellationToken cancellationToken)
+    {
+        var found = await client.RetrieveMultipleAsync(
+            new QueryExpression(WorkOrderSchema.EntityName)
+            {
+                ColumnSet = new ColumnSet(WorkOrderSchema.Number),
+                TopCount = 1,
+                Criteria =
+                {
+                    Conditions =
+                    {
+                        new ConditionExpression(WorkOrderSchema.RequestKey, ConditionOperator.Equal, requestKey)
+                    }
+                }
+            },
             cancellationToken).ConfigureAwait(false);
 
-        return workOrder.Id;
+        if (found.Entities.Count is 0)
+        {
+            // The store said this key is taken and then could not show what by.
+            // Guessing would be worse than saying so.
+            throw new InvalidOperationException(
+                $"Request {requestKey} was refused as a repeat, but no work order carries it.");
+        }
+
+        var earlier = found.Entities[0];
+
+        return new StoredWorkOrder(
+            earlier.Id,
+            earlier.GetAttributeValue<string>(WorkOrderSchema.Number) ?? "(unnumbered)",
+            WasRaisedNow: false);
     }
 
     /// <inheritdoc/>

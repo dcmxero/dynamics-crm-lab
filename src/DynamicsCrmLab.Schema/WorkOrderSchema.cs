@@ -47,6 +47,12 @@ public static class WorkOrderSchema
     public const string RowVersion = "versionnumber";
 
     /// <summary>
+    /// What the caller called this request, so that sending it twice raises one
+    /// job rather than two.
+    /// </summary>
+    public const string RequestKey = "dcl_requestkey";
+
+    /// <summary>
     /// Gets the columns needed to rebuild the aggregate.
     /// </summary>
     public static IReadOnlyList<string> ReadColumns { get; } =

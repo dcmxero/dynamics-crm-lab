@@ -21,12 +21,22 @@ public interface IWorkOrderRepository
     Task<WorkOrder?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Stores a newly raised work order.
+    /// Stores a newly raised work order, unless this request already raised one.
     /// </summary>
+    /// <remarks>
+    /// The key names the request, not the job. A client that sends the same
+    /// request twice - a retry after a timeout, a second press of a button -
+    /// means one job, and the store is what decides that rather than a check
+    /// the second request could arrive too quickly to see.
+    /// </remarks>
     /// <param name="workOrder">The work order to store.</param>
+    /// <param name="requestKey">What the caller called this request.</param>
     /// <param name="cancellationToken">Cancels the operation.</param>
-    /// <returns>The identifier the store assigned to the record.</returns>
-    Task<Guid> AddAsync(WorkOrder workOrder, CancellationToken cancellationToken = default);
+    /// <returns>The job this request stands for, and whether it was raised now.</returns>
+    Task<StoredWorkOrder> AddAsync(
+        WorkOrder workOrder,
+        string requestKey,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Writes back the parts of a work order that can change after it was raised.
@@ -53,3 +63,14 @@ public interface IWorkOrderRepository
         string? cursor = null,
         CancellationToken cancellationToken = default);
 }
+
+/// <summary>
+/// Represents the job a raise request stands for.
+/// </summary>
+/// <param name="WorkOrderId">The identifier of the job.</param>
+/// <param name="Number">The reference quoted to the customer.</param>
+/// <param name="WasRaisedNow">
+/// <see langword="false"/> when an earlier request with the same key had
+/// already raised it.
+/// </param>
+public sealed record StoredWorkOrder(Guid WorkOrderId, string Number, bool WasRaisedNow);

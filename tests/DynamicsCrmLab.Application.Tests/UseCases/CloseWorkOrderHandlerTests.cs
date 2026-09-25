@@ -71,7 +71,7 @@ public sealed class CloseWorkOrderHandlerTests
             workOrder.StartWork();
         }
 
-        await _workOrders.AddAsync(workOrder);
+        await _workOrders.AddAsync(workOrder, "test");
         return workOrder;
     }
 }

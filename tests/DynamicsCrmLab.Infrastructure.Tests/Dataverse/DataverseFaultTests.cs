@@ -36,6 +36,24 @@ public sealed class DataverseFaultTests
     }
 
     [Fact]
+    public void IsDuplicateKey_RecognisesTheCodeATakenKeyComesBackAs()
+    {
+        // Also taken from the platform: an environment was asked to write the
+        // same request key twice and this is what it answered with.
+        var fault = Fault(unchecked((int)0x80060892));
+
+        DataverseFault.IsDuplicateKey(fault).Should().BeTrue();
+    }
+
+    [Fact]
+    public void IsDuplicateKey_LeavesALostRaceAlone()
+    {
+        var fault = Fault(unchecked((int)0x80060882));
+
+        DataverseFault.IsDuplicateKey(fault).Should().BeFalse();
+    }
+
+    [Fact]
     public void IsRecordNotFound_LeavesEveryOtherFailureAlone()
     {
         // 0x80040265 is a plug-in reporting a business rule, which must keep
