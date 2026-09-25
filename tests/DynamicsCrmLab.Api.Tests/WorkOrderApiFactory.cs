@@ -58,6 +58,15 @@ internal sealed class WorkOrderApiFactory : WebApplicationFactory<Program>
     {
         builder.UseSetting("Dataverse:Url", "https://contoso.crm4.dynamics.com");
 
+        // The host refuses to start without a tenant to validate tokens
+        // against, and a checkout names none: the developer who set the lab up
+        // keeps theirs in user secrets. A test that borrowed those would pass
+        // on their machine and nowhere else, so it brings its own.
+        builder.UseSetting("AzureAd:Instance", "https://login.microsoftonline.com/");
+        builder.UseSetting("AzureAd:TenantId", "00000000-0000-0000-0000-000000000000");
+        builder.UseSetting("AzureAd:ClientId", "00000000-0000-0000-0000-000000000001");
+        builder.UseSetting("AzureAd:Audience", Audience);
+
         builder.ConfigureServices(services =>
         {
             services.Configure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, options =>
